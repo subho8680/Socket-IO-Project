@@ -13,8 +13,15 @@ export const registerStudent = async (req, res) => {
       });
     }
     const newUser = await studentModel.create({ name, email, password });
+    const tokenData = {
+      userId: newUser._id,
+      userType: "Student",
+    };
+    const day = 24 * 60 * 60 * 1000;
+    const token = jwt.sign(tokenData, process.env.SECRET_KEY);
+    res.cookie("token", token, { maxAge: day });
     return res.status(201).json({
-      msg: "User Created Successfully",
+      msg: "User Logged in Successfully",
       success: true,
       user: newUser,
     });
@@ -108,7 +115,7 @@ export const submitStudentAnswer = async (req, res) => {
       console.log(
         submitOption +
           " " +
-          quizDetails.questions[index].correctOption.quesionNo
+          quizDetails.questions[index].correctOption.quesionNo,
       );
 
       const details = await quizPerfModel.create({
