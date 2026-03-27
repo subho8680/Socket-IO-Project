@@ -73,7 +73,10 @@ function deleteRoom(roomId) {
 function clearRoomTimers(roomId) {
   const room = rooms[roomId];
   if (!room) return;
-  Object.values(room.timers).forEach((t) => clearInterval(t));
+  Object.values(room.timers).forEach((t) => {
+    clearInterval(t);
+    clearTimeout(t);
+  });
   room.timers = {};
 }
 
@@ -199,7 +202,7 @@ function updateTeacherSocket(roomId, newSocketId) {
   room.teacher.socketId = newSocketId;
   return true;
 }
-export default{
+export default {
   createRoom,
   getRoom,
   roomExists,

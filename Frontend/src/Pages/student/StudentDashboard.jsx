@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Input, message } from "antd";
 import {
@@ -12,7 +12,7 @@ import {
 import DashboardLayout from "../../components/common/DashboardLayout";
 import { useAuth } from "../../context/AuthContext";
 import { mockStudentHistory, mockStudentStats } from "../../data/mockData";
-
+import { useSocket } from "../../Services/Usesocket";
 const RANK_COLORS = ["#f59e0b", "#8b8ba7", "#cd7f32"];
 
 export default function StudentDashboard() {
@@ -27,7 +27,7 @@ export default function StudentDashboard() {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   };
-
+  const {on,joinRoom} = useSocket();
   const handleJoin = async () => {
     if (!roomCode.trim()) {
       message.warning("Enter a room code");
@@ -38,11 +38,28 @@ export default function StudentDashboard() {
       message.error("Invalid room code");
       return;
     }
-    setJoining(true);
-    await new Promise((r) => setTimeout(r, 800));
-    navigate(`/room/${code}/waiting`);
+    joinRoom(roomCode,user.user.name);
   };
-
+  console.log("user details is",user)
+  const [navigating, setnavigating] = useState(false)
+  useEffect(() => {
+    const joinSuccess = on("join-success",({roomId,studentName})=>{
+      message.success("Joined Room Successfully");
+      setnavigating(true);
+      setTimeout(() => {
+        setnavigating(false)
+        navigate(`/room/${roomId}/waiting`);
+      }, 500);
+    })
+    const joinError = on("join-error",({msg})=>{
+      message.error(msg);
+    })
+    return ()=>{
+      joinSuccess();
+      joinError();
+    }
+  }, [on])
+  
   const STAT_CARDS = [
     {
       label: "Quizzes Taken",

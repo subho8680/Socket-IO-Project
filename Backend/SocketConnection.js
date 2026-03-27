@@ -80,6 +80,12 @@ export const connectSocket = (io) => {
         studentName: student.name,
         totalStudents: room.students.length,
       });
+      io.to(roomId).emit("joined-list", {
+        studentList: room.students.map((s) => ({
+          name: s.name,
+          socketId: s.socketId,
+        })),
+      });
       const teacherSocket = getTeacherSocket(room);
       if (teacherSocket) {
         teacherSocket.emit("student-joined", {
@@ -95,13 +101,13 @@ export const connectSocket = (io) => {
 
     socket.on("start-quiz", ({ roomId }) => {
       if (!isTeacher(socket, roomId)) return;
-
+      console.log("nw quiz starting");
       const room = rm.getRoom(roomId);
       if (!room) return;
 
       if (room.students.length === 0) {
-        socket.emit("error", { message: "No students in room yet." });
-        return;
+        // socket.emit("error", { message: "No students in room yet." });
+        // return;
       }
 
       rm.startQuiz(roomId);
@@ -176,14 +182,14 @@ export const connectSocket = (io) => {
       });
 
       io.to(roomId).emit("leaderboard-update", rm.getLeaderboard(roomId));
-      const allAnswered = checkAllAnswered(room, questionIndex);
-      if (allAnswered) {
-        console.log(
-          `⚡ All students answered — moving early in room ${roomId}`,
-        );
-        rm.clearRoomTimers(roomId);
-        setTimeout(() => revealAnswerAndNext(roomId), 1500);
-      }
+      // const allAnswered = checkAllAnswered(room, questionIndex);
+      // if (allAnswered) {
+      //   console.log(
+      //     `⚡ All students answered — moving early in room ${roomId}`,
+      //   );
+      //   rm.clearRoomTimers(roomId);
+      //   setTimeout(() => revealAnswerAndNext(roomId), 1500);
+      // }
     });
 
     socket.on("pause-quiz", ({ roomId }) => {
@@ -382,12 +388,12 @@ export const connectSocket = (io) => {
     const question = room.questions[questionIndex];
 
     console.log(`📢 Broadcasting Q${questionIndex} in room ${roomId}`);
-
+    console.log("timelimit is", question.timeLimit);
     io.to(roomId).emit("new-question", {
       questionIndex,
       question: question.question,
       options: question.options,
-      timeLimit: question.timeLimit,
+      timeLimit: question.timeLimit || 30,
       totalQuestions: room.questions.length,
       questionNumber: questionIndex + 1,
     });
@@ -402,7 +408,7 @@ export const connectSocket = (io) => {
     let timeLeft = timeLimit;
 
     room.timers["questionTimer"] = setInterval(() => {
-      const r = rm.getRoom(roomId); 
+      const r = rm.getRoom(roomId);
       if (!r || r.status !== "active") {
         clearInterval(room.timers["questionTimer"]);
         return;

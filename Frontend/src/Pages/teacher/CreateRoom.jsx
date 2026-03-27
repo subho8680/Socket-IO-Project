@@ -40,7 +40,7 @@ function normaliseQuestion(apiQ, timePerQ = 30) {
     options: apiQ.options,
     correct: getCorrectIndex(apiQ.correctOption),
     answer: apiQ.correctOption?.answer ?? "",
-    time: timePerQ,
+    timeLimit: timePerQ,
     points: 100,
   };
 }
@@ -310,9 +310,10 @@ export default function CreateRoom() {
       return;
     }
     setLaunching(true);
-
+    console.log("clicked")
     try {
       createRoom(user.user.name, questions);
+      // console.log("questions are",questions)
     } catch (err) {
       message.error("Failed to launch room. Try again.");
       console.error("Launch error:", err);

@@ -1,25 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Avatar, Progress } from "antd";
+import { Avatar } from "antd";
 import {
   TrophyOutlined,
   ThunderboltOutlined,
   CheckOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
-import {
-  mockQuestions,
-  mockLeaderboard,
-  OPTION_COLORS,
-  OPTION_LABELS,
-} from "../../data/mockData";
+import { OPTION_COLORS, OPTION_LABELS } from "../../data/mockData";
 import { useAuth } from "../../context/AuthContext";
 import Logo from "../../components/common/Logo";
-
-const QUESTION_TIME = 30;
-
+import { useSocket } from "../../Services/Usesocket";
+import { toast } from "react-toastify";
 function TimerBar({ timeLeft, total }) {
-  const pct = (timeLeft / total) * 100;
+  const pct = total > 0 ? (timeLeft / total) * 100 : 0;
   const color =
     timeLeft > 10 ? "#7c3aed" : timeLeft > 5 ? "#f59e0b" : "#ef4444";
   return (
@@ -43,50 +37,59 @@ function TimerBar({ timeLeft, total }) {
   );
 }
 
-function AnswerOption({ opt, index, selected, correct, revealed, onClick }) {
+function AnswerOption({ opt, index, selected, correctAnswer, phase, onClick }) {
   let bg = "#0d0d18";
   let border = "#1e1e35";
   let textColor = "#8b8ba7";
 
-  if (selected && !revealed) {
+  if (phase === "answered" && selected) {
     bg = "rgba(124,58,237,0.2)";
     border = "#7c3aed";
     textColor = "#a78bfa";
   }
-  if (revealed && index === correct) {
-    bg = "rgba(16,185,129,0.15)";
-    border = "#10b981";
-    textColor = "#10b981";
+
+  if (phase === "reveal") {
+    if (index === correctAnswer) {
+      bg = "rgba(16,185,129,0.15)";
+      border = "#10b981";
+      textColor = "#10b981";
+    } else if (selected && index !== correctAnswer) {
+      bg = "rgba(239,68,68,0.12)";
+      border = "#ef4444";
+      textColor = "#ef4444";
+    } else {
+      bg = "#0d0d18";
+      border = "#1e1e35";
+      textColor = "#4b4b68";
+    }
   }
-  if (revealed && selected && index !== correct) {
-    bg = "rgba(239,68,68,0.12)";
-    border = "#ef4444";
-    textColor = "#ef4444";
-  }
+
+  const isLocked = phase === "answered" || phase === "reveal";
 
   return (
     <button
-      onClick={() => !revealed && onClick(index)}
-      disabled={revealed}
+      onClick={() => !isLocked && onClick(index)}
+      disabled={isLocked}
       className="w-full flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-200"
       style={{
         background: bg,
         border: `1.5px solid ${border}`,
-        cursor: revealed ? "not-allowed" : "pointer",
-        opacity: revealed && index !== correct && !selected ? 0.5 : 1,
+        cursor: isLocked ? "not-allowed" : "pointer",
+        opacity:
+          phase === "reveal" && index !== correctAnswer && !selected ? 0.4 : 1,
       }}
     >
       <span
-        className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 transition-all"
+        className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
         style={{
           background: OPTION_COLORS[index] + "25",
           color: OPTION_COLORS[index],
         }}
       >
-        {revealed && index === correct ? (
-          <CheckOutlined />
-        ) : revealed && selected && index !== correct ? (
-          <CloseOutlined />
+        {phase === "reveal" && index === correctAnswer ? (
+          <CheckOutlined style={{ color: "#10b981" }} />
+        ) : phase === "reveal" && selected && index !== correctAnswer ? (
+          <CloseOutlined style={{ color: "#ef4444" }} />
         ) : (
           OPTION_LABELS[index]
         )}
@@ -102,69 +105,184 @@ export default function StudentQuizRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [qIndex, setQIndex] = useState(0);
+  const { on, submitAnswer } = useSocket();
+
+  const [phase, setPhase] = useState("waiting");
+  const [curQues, setCurQues] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [revealed, setRevealed] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [phase, setPhase] = useState("question");
   const [pointsEarned, setPointsEarned] = useState(0);
-  const timerRef = useRef(null);
-  const questions = mockQuestions;
-  const currentQ = questions[qIndex];
+  const [myRank, setMyRank] = useState(null);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [correctAnswer, setCorrectAnswer] = useState(null);
+  const [answeredCorrectly, setAnsweredCorrectly] = useState(null);
+  const [answeredCount, setAnsweredCount] = useState(0);
+  const [totalStudents, setTotalStudents] = useState(0);
 
   useEffect(() => {
-    setTimeLeft(QUESTION_TIME);
-    setSelected(null);
-    setRevealed(false);
-    setPhase("question");
-    timerRef.current = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(timerRef.current);
-          handleTimeUp();
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [qIndex]);
+    const offQuestion = on(
+      "new-question",
+      ({
+        questionIndex,
+        question,
+        options,
+        timeLimit,
+        totalQuestions,
+        questionNumber,
+      }) => {
+        setCurQues({
+          questionIndex,
+          question,
+          options,
+          timeLimit,
+          questionNumber,
+        });
+        setTotalQuestions(totalQuestions);
+        setSelected(null);
+        // setRevealed(false);
+        setPhase("question");
+        setTimeLeft(timeLimit);
+        setPointsEarned(0);
+        setCorrectAnswer(null);
+        setIsPaused(false);
+      },
+    );
+    const joinedList = on("joined-list", ({ studentList }) => {
+      setstudentList(studentList);
+    });
+    const quizStart = on("quiz-started", ({ totalQuestions, message }) => {
+      toast.success(message);
+    });
+    const offTick = on("timer-tick", ({ timeLeft }) => {
+      setTimeLeft(timeLeft);
+    });
 
-  const handleTimeUp = () => {
-    setRevealed(true);
-    setStreak(0);
-    setPhase("feedback");
-    setTimeout(goNext, 2000);
-  };
+    const offTimeUp = on("time-up", ({ correctAnswer, leaderboard }) => {
+      setCorrectAnswer(correctAnswer);
+      setRevealed(true);
+      setPhase("feedback");
+      setStreak(0);
+      const me = leaderboard.find((s) => s.name === user?.user?.name);
+      if (me) setMyRank(me.rank);
+    });
+
+    const offAnswerReceived = on(
+      "answer-received",
+      ({ isCorrect, pointsEarned, totalScore }) => {
+        setScore(totalScore);
+        setPointsEarned(pointsEarned);
+        setPhase("feedback");
+        if (isCorrect) {
+          setStreak((prev) => prev + 1);
+        } else {
+          setStreak(0);
+        }
+      },
+    );
+
+    const offAlreadyAnswered = on("already-answered", () => {
+      setPhase("feedback");
+    });
+
+    const offTooLate = on("answer-too-late", () => {
+      setPhase("feedback");
+    });
+
+    const offLeaderboard = on("leaderboard-update", (leaderboard) => {
+      const me = leaderboard.find((s) => s.name === user?.user?.name);
+      if (me) {
+        setMyRank(me.rank);
+        setScore(me.score);
+      }
+    });
+
+    const offPaused = on("quiz-paused", () => {
+      setIsPaused(true);
+    });
+
+    const offResumed = on("quiz-resumed", () => {
+      setIsPaused(false);
+    });
+
+    const offEnded = on("quiz-ended", ({ leaderboard, myStats }) => {
+      navigate(`/student/room/${roomId}/results`, {
+        state: { leaderboard, myStats },
+      });
+    });
+
+    const offKicked = on("you-were-kicked", () => {
+      navigate("/student/dashboard");
+    });
+
+    const offRoomClosed = on("room-closed", () => {
+      navigate("/student/dashboard");
+    });
+
+    const offAutoClosed = on("room-auto-closed", () => {
+      navigate("/student/dashboard");
+    });
+
+    return () => {
+      offQuestion();
+      offTick();
+      offTimeUp();
+      offAnswerReceived();
+      offAlreadyAnswered();
+      offTooLate();
+      offLeaderboard();
+      offPaused();
+      offResumed();
+      offEnded();
+      offKicked();
+      offRoomClosed();
+      offAutoClosed();
+      quizStart();
+      joinedList();
+    };
+  }, [on]);
 
   const handleAnswer = (idx) => {
-    clearInterval(timerRef.current);
+    if (phase !== "question" || !curQues) return;
     setSelected(idx);
-    setRevealed(true);
-    const isCorrect = idx === currentQ.correct;
-    const speedBonus = Math.round((timeLeft / QUESTION_TIME) * 200);
-    const pts = isCorrect
-      ? 1000 + speedBonus + (isCorrect ? streak * 150 : 0)
-      : 0;
-    setPointsEarned(pts);
-    if (isCorrect) {
-      setScore((s) => s + pts);
-      setStreak((s) => s + 1);
-    } else setStreak(0);
-    setPhase("feedback");
-    setTimeout(goNext, 2000);
+    setPhase("answered");
+    submitAnswer(roomId, curQues.questionIndex, idx);
   };
 
-  const goNext = () => {
-    if (qIndex < questions.length - 1) setQIndex((i) => i + 1);
-    else
-      navigate(`/student/room/${roomId}/results`, { state: { score, streak } });
-  };
-
-  const userRank = 3;
-  const myEntry = mockLeaderboard[userRank - 1];
+  if (phase === "waiting") {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center"
+        style={{ background: "#07070e" }}
+      >
+        <Logo size="sm" />
+        <div className="mt-8 text-center">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: "rgba(124,58,237,0.15)",
+              border: "1px solid rgba(124,58,237,0.3)",
+            }}
+          >
+            <span className="text-2xl animate-pulse">⏳</span>
+          </div>
+          <p className="text-txt-primary font-bold text-lg mb-2">
+            Waiting for teacher to start...
+          </p>
+          <p className="text-txt-muted text-sm">
+            Room: <span className="font-mono text-brand-light">{roomId}</span>
+          </p>
+          {totalStudents > 0 && (
+            <p className="text-txt-muted text-xs mt-2">
+              {totalStudents} student{totalStudents > 1 ? "s" : ""} in room
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -177,9 +295,21 @@ export default function StudentQuizRoom() {
       >
         <Logo size="sm" />
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-xs text-txt-secondary">
-            <span className="font-mono">{roomId}</span>
-          </div>
+          <span className="text-xs text-txt-secondary font-mono">{roomId}</span>
+
+          {isPaused && (
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-bold"
+              style={{
+                background: "rgba(245,158,11,0.15)",
+                color: "#f59e0b",
+                border: "1px solid rgba(245,158,11,0.3)",
+              }}
+            >
+              PAUSED
+            </span>
+          )}
+
           <div
             className="flex items-center gap-2 px-3 py-1 rounded-full"
             style={{
@@ -192,9 +322,10 @@ export default function StudentQuizRoom() {
               {score.toLocaleString()}
             </span>
           </div>
+
           {streak > 1 && (
             <div
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full animate-fade-in"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full"
               style={{
                 background: "rgba(239,68,68,0.15)",
                 border: "1px solid rgba(239,68,68,0.3)",
@@ -203,6 +334,7 @@ export default function StudentQuizRoom() {
               <span className="text-danger text-xs font-bold">🔥 {streak}</span>
             </div>
           )}
+
           <Avatar
             size={28}
             style={{
@@ -211,120 +343,171 @@ export default function StudentQuizRoom() {
               fontWeight: 700,
             }}
           >
-            {user?.name?.[0] || "U"}
+            {user?.user?.name?.[0]?.toUpperCase() || "U"}
           </Avatar>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-4 py-6 md:py-10">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex gap-1 flex-1">
-            {questions.map((_, i) => (
+        {curQues && (
+          <>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex gap-1 flex-1">
+                {Array.from({ length: totalQuestions }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 h-1.5 rounded-full transition-all"
+                    style={{
+                      background:
+                        i < curQues.questionIndex
+                          ? "#7c3aed"
+                          : i === curQues.questionIndex
+                            ? "#a78bfa"
+                            : "#1e1e35",
+                    }}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-txt-secondary flex-shrink-0 font-semibold">
+                {curQues.questionNumber}/{totalQuestions}
+              </span>
+            </div>
+
+            {phase !== "reveal" && (
+              <div className="mb-6">
+                <TimerBar timeLeft={timeLeft} total={curQues.timeLimit} />
+              </div>
+            )}
+
+            <div
+              className="p-6 rounded-2xl mb-5"
+              style={{ background: "#12121f", border: "1px solid #1e1e35" }}
+            >
+              <div className="flex items-start gap-3">
+                <span
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+                  style={{
+                    background: "rgba(124,58,237,0.2)",
+                    color: "#a78bfa",
+                  }}
+                >
+                  {curQues.questionNumber}
+                </span>
+                <p className="text-base md:text-lg font-bold text-txt-primary leading-relaxed">
+                  {curQues.question}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 mb-6">
+              {curQues.options.map((opt, oi) => (
+                <AnswerOption
+                  key={oi}
+                  opt={opt}
+                  index={oi}
+                  selected={selected === oi}
+                  correctAnswer={correctAnswer}
+                  phase={phase}
+                  onClick={handleAnswer}
+                />
+              ))}
+            </div>
+
+            {phase === "answered" && (
               <div
-                key={i}
-                className="flex-1 h-1.5 rounded-full transition-all"
+                className="p-4 rounded-2xl text-center"
+                style={{
+                  background: "rgba(124,58,237,0.08)",
+                  border: "1px solid rgba(124,58,237,0.2)",
+                }}
+              >
+                <div className="text-2xl mb-1">✅</div>
+                <div className="font-bold text-brand-light text-base">
+                  Answer submitted!
+                </div>
+                <div className="text-sm text-txt-muted mt-1 animate-pulse">
+                  Waiting for others...
+                </div>
+              </div>
+            )}
+
+            {phase === "reveal" && (
+              <div
+                className="p-4 rounded-2xl text-center"
                 style={{
                   background:
-                    i < qIndex
-                      ? "#7c3aed"
-                      : i === qIndex
-                        ? "#a78bfa"
-                        : "#1e1e35",
+                    answeredCorrectly === true
+                      ? "rgba(16,185,129,0.12)"
+                      : answeredCorrectly === false
+                        ? "rgba(239,68,68,0.12)"
+                        : "rgba(245,158,11,0.08)",
+                  border: `1px solid ${
+                    answeredCorrectly === true
+                      ? "#10b98150"
+                      : answeredCorrectly === false
+                        ? "#ef444450"
+                        : "#f59e0b50"
+                  }`,
                 }}
-              />
-            ))}
-          </div>
-          <span className="text-xs text-txt-secondary flex-shrink-0 font-semibold">
-            {qIndex + 1}/{questions.length}
-          </span>
-        </div>
-
-        <div className="mb-6">
-          <TimerBar timeLeft={timeLeft} total={QUESTION_TIME} />
-        </div>
-
-        <div
-          className="p-6 rounded-2xl mb-5 animate-fade-in"
-          style={{ background: "#12121f", border: "1px solid #1e1e35" }}
-        >
-          <div className="flex items-start gap-3">
-            <span
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
-              style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa" }}
-            >
-              {qIndex + 1}
-            </span>
-            <p className="text-base md:text-lg font-bold text-txt-primary leading-relaxed">
-              {currentQ.question}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 mb-6">
-          {currentQ.options.map((opt, oi) => (
-            <AnswerOption
-              key={oi}
-              opt={opt}
-              index={oi}
-              selected={selected === oi}
-              correct={currentQ.correct}
-              revealed={revealed}
-              onClick={handleAnswer}
-            />
-          ))}
-        </div>
-
-        {phase === "feedback" && (
-          <div
-            className="p-4 rounded-2xl text-center animate-fade-up"
-            style={{
-              background:
-                selected === currentQ.correct
-                  ? "rgba(16,185,129,0.12)"
-                  : selected === null
-                    ? "rgba(239,68,68,0.08)"
-                    : "rgba(239,68,68,0.12)",
-              border: `1px solid ${selected === currentQ.correct ? "#10b981" : "#ef4444"}50`,
-            }}
-          >
-            {selected === currentQ.correct ? (
-              <>
-                <div className="text-3xl mb-1">🎉</div>
-                <div className="font-bold text-success text-base">Correct!</div>
-                <div className="text-sm text-txt-secondary mt-1">
-                  +{pointsEarned.toLocaleString()} pts{" "}
-                  {streak > 1 && `· 🔥 ${streak} streak`}
+              >
+                {answeredCorrectly === true ? (
+                  <>
+                    <div className="text-3xl mb-1">🎉</div>
+                    <div className="font-bold text-success text-base">
+                      Correct!
+                    </div>
+                    <div className="text-sm text-txt-secondary mt-1">
+                      +{pointsEarned.toLocaleString()} pts
+                      {streak > 1 && ` · 🔥 ${streak} streak`}
+                    </div>
+                  </>
+                ) : answeredCorrectly === false ? (
+                  <>
+                    <div className="text-3xl mb-1">❌</div>
+                    <div className="font-bold text-danger text-base">
+                      Wrong answer
+                    </div>
+                    <div className="text-sm text-txt-secondary mt-1">
+                      Correct:{" "}
+                      <span className="text-success font-semibold">
+                        {OPTION_LABELS[correctAnswer]}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-3xl mb-1">⏱️</div>
+                    <div className="font-bold text-warning text-base">
+                      Time's up!
+                    </div>
+                    <div className="text-sm text-txt-secondary mt-1">
+                      Correct:{" "}
+                      <span className="text-success font-semibold">
+                        {OPTION_LABELS[correctAnswer]}
+                      </span>
+                    </div>
+                  </>
+                )}
+                <div className="mt-2 text-xs text-txt-muted">
+                  Next question in a moment...
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="text-3xl mb-1">
-                  {selected === null ? "⏱️" : "❌"}
-                </div>
-                <div className="font-bold text-danger text-base">
-                  {selected === null ? "Time's up!" : "Wrong answer"}
-                </div>
-                <div className="text-sm text-txt-secondary mt-1">
-                  Correct:{" "}
-                  <span className="text-success font-semibold">
-                    {OPTION_LABELS[currentQ.correct]}
-                  </span>
-                </div>
-              </>
+              </div>
             )}
-            <div className="mt-2 text-xs text-txt-muted">
-              Next question in a moment...
-            </div>
-          </div>
-        )}
 
-        <div className="mt-auto pt-4 flex items-center justify-between text-xs text-txt-muted">
-          <span className="flex items-center gap-1">
-            <ThunderboltOutlined /> Live rank:{" "}
-            <span className="text-txt-primary font-bold ml-1">#{userRank}</span>
-          </span>
-          <span>{Math.round((qIndex / questions.length) * 100)}% complete</span>
-        </div>
+            <div className="mt-auto pt-4 flex items-center justify-between text-xs text-txt-muted">
+              <span className="flex items-center gap-1">
+                <ThunderboltOutlined /> Live rank:{" "}
+                <span className="text-txt-primary font-bold ml-1">
+                  {myRank ? `#${myRank}` : "--"}
+                </span>
+              </span>
+              <span>
+                {Math.round((curQues.questionIndex / totalQuestions) * 100)}%
+                complete
+              </span>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
