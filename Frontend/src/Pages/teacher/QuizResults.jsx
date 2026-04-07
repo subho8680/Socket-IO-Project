@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, Avatar, Progress, Tag } from "antd";
 import {
   TrophyOutlined,
@@ -66,9 +66,10 @@ export default function QuizResults() {
   const [showAI, setShowAI] = useState(false);
   const [loadingAI, setLoadingAI] = useState(false);
   const [aiReport, setAiReport] = useState("");
-
-  const top3 = mockLeaderboard.slice(0, 3);
-  const rest = mockLeaderboard.slice(3);
+  const location = useLocation();
+  const leaderboard = location.state?.leaderboard ?? []
+  const top3 = leaderboard.slice(0, 3);
+  const rest = leaderboard.slice(3);
 
   const handleAIReport = async () => {
     setLoadingAI(true);
@@ -83,7 +84,7 @@ export default function QuizResults() {
   const statsRow = [
     {
       label: "Total Students",
-      value: mockLeaderboard.length,
+      value: leaderboard.length,
       icon: <TeamOutlined />,
       color: "#06b6d4",
     },
@@ -101,7 +102,7 @@ export default function QuizResults() {
     },
     {
       label: "Top Score",
-      value: mockLeaderboard[0].score.toLocaleString(),
+      value: leaderboard[0].score.toLocaleString(),
       icon: <TrophyOutlined />,
       color: "#10b981",
     },
@@ -198,7 +199,7 @@ export default function QuizResults() {
             Full Rankings
           </h3>
           <div className="space-y-2">
-            {mockLeaderboard.map((entry, i) => (
+            {leaderboard.map((entry, i) => (
               <div
                 key={entry.name}
                 className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-bg-hover"

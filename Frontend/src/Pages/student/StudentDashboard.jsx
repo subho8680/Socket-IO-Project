@@ -1,6 +1,6 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Input, message } from "antd";
+import { Button, Input, message, Empty } from "antd";
 import {
   ThunderboltOutlined,
   TrophyOutlined,
@@ -8,293 +8,267 @@ import {
   ArrowRightOutlined,
   HistoryOutlined,
   StarOutlined,
+  RocketOutlined,
 } from "@ant-design/icons";
 import DashboardLayout from "../../components/common/DashboardLayout";
 import { useAuth } from "../../context/AuthContext";
-import { mockStudentHistory, mockStudentStats } from "../../data/mockData";
 import { useSocket } from "../../Services/Usesocket";
-const RANK_COLORS = ["#f59e0b", "#8b8ba7", "#cd7f32"];
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  console.log("user data is", user);
+  const { on, joinRoom } = useSocket();
+
   const [roomCode, setRoomCode] = useState("");
   const [joining, setJoining] = useState(false);
+  const [navigating, setNavigating] = useState(false);
+
   const firstName = user?.user?.name?.split(" ")[0] || "Student";
-  const stats = mockStudentStats;
+
   const greeting = () => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   };
-  const {on,joinRoom} = useSocket();
+
+  const stats = null;
+  const recentQuizzes = []; 
+
   const handleJoin = async () => {
     if (!roomCode.trim()) {
-      message.warning("Enter a room code");
+      message.warning("Please enter a room code");
       return;
     }
+
     const code = roomCode.trim().toUpperCase();
     if (code.length < 4) {
       message.error("Invalid room code");
       return;
     }
-    joinRoom(roomCode,user.user.name);
+
+    setJoining(true);
+    joinRoom(code, user?.user?.name);
   };
-  console.log("user details is",user)
-  const [navigating, setnavigating] = useState(false)
+
   useEffect(() => {
-    const joinSuccess = on("join-success",({roomId,studentName})=>{
-      message.success("Joined Room Successfully");
-      setnavigating(true);
+    const joinSuccess = on("join-success", ({ roomId }) => {
+      message.success("Joined room successfully! 🎉");
+      setNavigating(true);
       setTimeout(() => {
-        setnavigating(false)
-        navigate(`/room/${roomId}/waiting`);
-      }, 500);
-    })
-    const joinError = on("join-error",({msg})=>{
-      message.error(msg);
-    })
-    return ()=>{
+        setNavigating(false);
+        navigate(`/student/room/${roomId}`);
+      }, 600);
+    });
+
+    const joinError = on("join-error", ({ msg }) => {
+      message.error(msg || "Failed to join room");
+      setJoining(false);
+    });
+
+    return () => {
       joinSuccess();
       joinError();
-    }
-  }, [on])
-  
-  const STAT_CARDS = [
-    {
-      label: "Quizzes Taken",
-      value: stats.quizzesTaken,
-      icon: <PlayCircleOutlined />,
-      color: "#7c3aed",
-      bg: "rgba(124,58,237,0.15)",
-    },
-    {
-      label: "Avg Score %",
-      value: `${stats.avgScore}%`,
-      icon: <ThunderboltOutlined />,
-      color: "#06b6d4",
-      bg: "rgba(6,182,212,0.15)",
-    },
-    {
-      label: "Best Rank",
-      value: `#${stats.bestRank}`,
-      icon: <TrophyOutlined />,
-      color: "#f59e0b",
-      bg: "rgba(245,158,11,0.15)",
-    },
-    {
-      label: "Total Points",
-      value: `${(stats.totalPoints / 1000).toFixed(1)}k`,
-      icon: <StarOutlined />,
-      color: "#10b981",
-      bg: "rgba(16,185,129,0.15)",
-    },
-  ];
+    };
+  }, [on, navigate]);
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
-        <div className="mb-8 animate-fade-up">
-          <h1 className="text-2xl md:text-3xl font-bold text-txt-primary">
-            {greeting()}, {firstName} 🎮
-          </h1>
-          <p className="text-txt-secondary text-sm mt-1">
-            Ready to compete? Enter a room code to join a quiz.
-          </p>
-        </div>
-
-        <div
-          className="p-6 md:p-8 rounded-3xl mb-8 relative overflow-hidden animate-fade-up"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(6,182,212,0.1) 100%)",
-            border: "1px solid rgba(124,58,237,0.35)",
-          }}
-        >
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              top: "-30%",
-              right: "-5%",
-              width: 250,
-              height: 250,
-              background:
-                "radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)",
-              borderRadius: "50%",
-            }}
-          />
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
-                style={{
-                  background: "rgba(124,58,237,0.3)",
-                  border: "1px solid rgba(124,58,237,0.4)",
-                }}
-              >
-                🚀
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-txt-primary">
-                  Join a Quiz Room
-                </h2>
-                <p className="text-xs text-txt-secondary">
-                  Get the room code from your teacher
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Input
-                value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                onPressEnter={handleJoin}
-                placeholder="Enter room code  e.g. BB-4X9K"
-                size="large"
-                maxLength={10}
-                style={{
-                  borderRadius: 12,
-                  height: 52,
-                  fontSize: 16,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  background: "rgba(0,0,0,0.3)",
-                  border: "1px solid rgba(124,58,237,0.4)",
-                  color: "#f1f1f8",
-                  flex: 1,
-                }}
-              />
-              <Button
-                type="primary"
-                size="large"
-                loading={joining}
-                onClick={handleJoin}
-                style={{
-                  height: 52,
-                  paddingInline: 28,
-                  background: "linear-gradient(135deg,#7c3aed,#5b21b6)",
-                  border: "none",
-                  fontWeight: 700,
-                  borderRadius: 12,
-                  fontSize: 15,
-                }}
-              >
-                {joining ? "Joining..." : "Join →"}
-              </Button>
-            </div>
+      <div className="min-h-screen bg-zinc-950 text-white">
+        <div className="max-w-5xl mx-auto px-6 py-10">
+          <div className="mb-10">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {greeting()}, {firstName} 👋
+            </h1>
+            <p className="text-zinc-400 mt-1 text-lg">
+              Ready to test your knowledge? Join a live quiz now.
+            </p>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {STAT_CARDS.map((s, i) => (
-            <div
-              key={s.label}
-              className="p-5 rounded-2xl animate-fade-up"
-              style={{
-                background: "#12121f",
-                border: "1px solid #1e1e35",
-                animationDelay: `${i * 0.05}s`,
-              }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                style={{ background: s.bg, color: s.color }}
-              >
-                {s.icon}
-              </div>
-              <div className="text-2xl font-black text-txt-primary">
-                {s.value}
-              </div>
-              <div className="text-xs text-txt-secondary mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 mb-12 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-violet-500/10 to-transparent rounded-full -translate-y-1/3 translate-x-1/3" />
 
-        <div className="animate-fade-up" style={{ animationDelay: "0.2s" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <HistoryOutlined style={{ color: "#8b8ba7" }} />
-            <h2 className="font-bold text-txt-primary text-lg">
-              Recent Quizzes
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {mockStudentHistory.map((item) => {
-              const rankColor =
-                item.rank <= 3 ? RANK_COLORS[item.rank - 1] : "#8b8ba7";
-              return (
-                <div
-                  key={item.roomId}
-                  onClick={() =>
-                    navigate(`/student/room/${item.roomId}/results`)
-                  }
-                  className="p-4 rounded-xl cursor-pointer transition-all duration-200 hover:border-bg-border flex items-start justify-between"
-                  style={{ background: "#12121f", border: "1px solid #1e1e35" }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-txt-primary text-sm truncate">
-                      {item.title}
-                    </h4>
-                    <p className="text-xs text-txt-secondary">
-                      {item.subject} · {item.date}
-                    </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-txt-secondary">
-                      <span>
-                        {item.correct}/{item.total_q} correct
-                      </span>
-                      <span className="font-bold text-txt-primary">
-                        {item.score.toLocaleString()} pts
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ml-4 flex flex-col items-end flex-shrink-0">
-                    <div
-                      className="font-black text-sm"
-                      style={{ color: rankColor }}
-                    >
-                      {item.rank <= 3
-                        ? ["🥇", "🥈", "🥉"][item.rank - 1]
-                        : `#${item.rank}`}
-                    </div>
-                    <div className="text-xs text-txt-muted">
-                      of {item.total}
-                    </div>
-                    <ArrowRightOutlined
-                      style={{ fontSize: 11, color: "#4b4b68", marginTop: 8 }}
-                    />
-                  </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-3xl">
+                  🚀
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div
-          className="mt-8 p-5 rounded-2xl animate-fade-up"
-          style={{
-            background: "#12121f",
-            border: "1px solid #1e1e35",
-            animationDelay: "0.25s",
-          }}
-        >
-          <h3 className="font-bold text-txt-primary text-sm mb-3">
-            💡 Pro Tips
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { icon: "⚡", tip: "Answer faster for speed bonus points" },
-              { icon: "🔥", tip: "Keep a streak alive for multiplier bonus" },
-              { icon: "🎯", tip: "Every correct answer = 1000 base points" },
-            ].map((t) => (
-              <div
-                key={t.tip}
-                className="flex items-start gap-2 p-3 rounded-xl"
-                style={{ background: "#0d0d18", border: "1px solid #1e1e35" }}
-              >
-                <span className="text-lg flex-shrink-0">{t.icon}</span>
-                <span className="text-xs text-txt-secondary leading-relaxed">
-                  {t.tip}
-                </span>
+                <div>
+                  <h2 className="text-2xl font-semibold">Join Live Quiz</h2>
+                  <p className="text-zinc-400 text-sm">
+                    Enter the room code shared by your teacher
+                  </p>
+                </div>
               </div>
-            ))}
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Input
+                  value={roomCode}
+                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                  onPressEnter={handleJoin}
+                  placeholder="Enter room code (e.g. ABCD1234)"
+                  size="large"
+                  maxLength={12}
+                  className="bg-zinc-950 border-zinc-700 text-lg font-mono tracking-widest h-14 rounded-2xl"
+                />
+
+                <Button
+                  type="primary"
+                  size="large"
+                  loading={joining || navigating}
+                  onClick={handleJoin}
+                  className="h-14 px-10 text-base font-semibold rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:brightness-110 flex-shrink-0"
+                >
+                  Join Quiz
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-medium text-zinc-400 flex items-center gap-2">
+                <RocketOutlined /> Your Performance
+              </h3>
+              {stats && (
+                <span className="text-xs text-zinc-500">This month</span>
+              )}
+            </div>
+
+            {stats ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                {[
+                  {
+                    label: "Quizzes Taken",
+                    value: stats.quizzesTaken || 0,
+                    icon: <PlayCircleOutlined />,
+                    color: "#7c3aed",
+                    bg: "rgba(124,58,237,0.15)",
+                  },
+                  {
+                    label: "Avg Score",
+                    value: `${stats.avgScore || 0}%`,
+                    icon: <ThunderboltOutlined />,
+                    color: "#06b6d4",
+                    bg: "rgba(6,182,212,0.15)",
+                  },
+                  {
+                    label: "Best Rank",
+                    value: stats.bestRank ? `#${stats.bestRank}` : "--",
+                    icon: <TrophyOutlined />,
+                    color: "#f59e0b",
+                    bg: "rgba(245,158,11,0.15)",
+                  },
+                  {
+                    label: "Total Points",
+                    value: stats.totalPoints
+                      ? `${(stats.totalPoints / 1000).toFixed(1)}k`
+                      : "0k",
+                    icon: <StarOutlined />,
+                    color: "#10b981",
+                    bg: "rgba(16,185,129,0.15)",
+                  },
+                ].map((stat, index) => (
+                  <div
+                    key={index}
+                    className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 hover:border-zinc-600 transition-all"
+                  >
+                    <div
+                      className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5"
+                      style={{ background: stat.bg, color: stat.color }}
+                    >
+                      {stat.icon}
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-1 tabular-nums">
+                      {stat.value}
+                    </div>
+                    <div className="text-sm text-zinc-400">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl py-16 text-center">
+                <Empty
+                  description={
+                    <div>
+                      <p className="text-zinc-400">No performance data yet</p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Complete some quizzes to see your stats here
+                      </p>
+                    </div>
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <HistoryOutlined className="text-xl text-zinc-400" />
+                <h3 className="text-lg font-semibold">Recent Activity</h3>
+              </div>
+            </div>
+
+            {recentQuizzes.length > 0 ? (
+              <div className="space-y-4">
+              </div>
+            ) : (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl py-20 text-center">
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={
+                    <div>
+                      <p className="text-zinc-400 mb-1">
+                        No recent quizzes yet
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Join your first live quiz to see history here
+                      </p>
+                    </div>
+                  }
+                />
+                <Button
+                  type="primary"
+                  className="mt-6 rounded-2xl bg-violet-600 hover:bg-violet-500"
+                  onClick={() =>
+                    window.scrollTo({ top: 0, behavior: "smooth" })
+                  }
+                >
+                  Join a Quiz Now
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
+            <h3 className="font-semibold text-lg mb-6 flex items-center gap-2">
+              💡 Quick Tips to Improve
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                {
+                  icon: "⚡",
+                  tip: "Answer quickly to earn speed bonus points",
+                },
+                {
+                  icon: "🔥",
+                  tip: "Maintain your streak for score multipliers",
+                },
+                {
+                  icon: "🎯",
+                  tip: "Every correct answer gives 1000 base points",
+                },
+              ].map((t, i) => (
+                <div
+                  key={i}
+                  className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 hover:border-zinc-600 transition-colors"
+                >
+                  <div className="text-2xl mb-3">{t.icon}</div>
+                  <p className="text-sm text-zinc-300 leading-relaxed">
+                    {t.tip}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

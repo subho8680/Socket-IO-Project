@@ -53,7 +53,7 @@ export const connectSocket = (io) => {
     });
     socket.on("join-room", ({ roomId, studentName }) => {
       const room = rm.getRoom(roomId);
-
+      console.log(`👤 ${studentName} is trying to join room ${roomId}`);
       if (!room) {
         socket.emit("join-error", {
           message: "Room not found. Check the code.",
@@ -297,7 +297,12 @@ export const connectSocket = (io) => {
       io.to(roomId).emit("teacher-reconnected", {
         message: "Teacher reconnected!",
       });
-
+      io.to(roomId).emit("joined-list", {
+        studentList: room.students.map((s) => ({
+          name: s.name,
+          socketId: s.socketId,
+        })),
+      });
       console.log(`🔄 Teacher rejoined room ${roomId}`);
     });
 
@@ -364,15 +369,15 @@ export const connectSocket = (io) => {
           message: "Teacher lost connection. Quiz is paused.",
         });
 
-        room.timers["teacherTimeout"] = setTimeout(() => {
-          if (rm.roomExists(roomId)) {
-            io.to(roomId).emit("room-auto-closed", {
-              message: "Room closed — teacher did not reconnect.",
-            });
-            console.log(`🗑️  Room ${roomId} auto-closed (teacher timeout)`);
-            rm.deleteRoom(roomId);
-          }
-        }, 60000);
+        // room.timers["teacherTimeout"] = setTimeout(() => {
+        //   if (rm.roomExists(roomId)) {
+        //     io.to(roomId).emit("room-auto-closed", {
+        //       message: "Room closed — teacher did not reconnect.",
+        //     });
+        //     console.log(`🗑️  Room ${roomId} auto-closed (teacher timeout)`);
+        //     rm.deleteRoom(roomId);
+        //   }
+        // }, 60000);
       } else if (role === "student") {
         const student = rm.removeStudent(roomId, socket.id);
         if (!student) return;
@@ -410,7 +415,7 @@ export const connectSocket = (io) => {
       questionNumber: questionIndex + 1,
     });
 
-    startTimer(roomId, question.timeLimit);
+    startTimer(roomId, question.timeLimit || 30);
   }
 
   function startTimer(roomId, timeLimit) {
@@ -447,8 +452,8 @@ export const connectSocket = (io) => {
 
     io.to(roomId).emit("time-up", {
       questionIndex,
-      correctAnswer: question.correctAnswer,
-      correctAnswerText: question.options[question.correctAnswer],
+      correctAnswer: question.correct,
+      correctAnswerText: question.options[question.correct],
       leaderboard: rm.getLeaderboard(roomId),
     });
 

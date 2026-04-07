@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Avatar, Progress, Tag, Badge } from "antd";
+import { Avatar, Progress, Spin } from "antd";
 import {
   TrophyOutlined,
   ThunderboltOutlined,
@@ -19,7 +19,7 @@ export default function StudentQuizRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { on, submitAnswer,giveList } = useSocket();
+  const { on, submitAnswer, giveList } = useSocket();
   const myName = user?.user?.name;
 
   const [phase, setPhase] = useState("waiting");
@@ -35,359 +35,471 @@ export default function StudentQuizRoom() {
   const [isPaused, setIsPaused] = useState(false);
   const [correctAnswer, setCorrectAnswer] = useState(null);
   const [answeredCorrectly, setAnsweredCorrectly] = useState(null);
+  const [nextQuesLoader, setnextQuesLoader] = useState(false);
   useEffect(() => {
-    giveList(roomId)
-  }, [])
-  
+    giveList(roomId);
+  }, [roomId, giveList]);
+
   useEffect(() => {
-    const offJoinedList = on("joined-list", ({ studentList }) => {
-      setStudentList(studentList);
-    });
-    const getList = on("take-list",({listStu})=>{
-      setStudentList(listStu)
-    })
-    const onSuccess = on("join-success",({studentList})=>{
-      setStudentList(studentList)
-    })
+    const cleanupFunctions = [];
+
+    const offJoinedList = on("joined-list", ({ studentList }) =>
+      setStudentList(studentList || []),
+    );
+    cleanupFunctions.push(offJoinedList);
+
+    const getList = on("take-list", ({ listStu }) =>
+      setStudentList(listStu || []),
+    );
+    cleanupFunctions.push(getList);
+
+    const onSuccess = on("join-success", ({ studentList }) =>
+      setStudentList(studentList || []),
+    );
+    cleanupFunctions.push(onSuccess);
+
     const offQuizStarted = on("quiz-started", ({ totalQuestions, message }) => {
       setTotalQuestions(totalQuestions);
       toast.success(message);
     });
+    cleanupFunctions.push(offQuizStarted);
 
-    const offQuestion = on("new-question", ({
-      questionIndex, question, options,
-      timeLimit, totalQuestions, questionNumber,
-    }) => {
-      setCurQues({ questionIndex, question, options, timeLimit, questionNumber });
-      setTotalQuestions(totalQuestions);
-      setSelected(null);
-      setCorrectAnswer(null);
-      setAnsweredCorrectly(null);
-      setPointsEarned(0);
-      setTimeLeft(timeLimit);
-      setIsPaused(false);
-      setPhase("question");
-    });
+    const offQuestion = on(
+      "new-question",
+      ({
+        questionIndex,
+        question,
+        options,
+        timeLimit,
+        totalQuestions,
+        questionNumber,
+      }) => {
+        setnextQuesLoader(false);
+        setCurQues({
+          questionIndex,
+          question,
+          options,
+          timeLimit,
+          questionNumber,
+        });
+        setTotalQuestions(totalQuestions);
+        setSelected(null);
+        setCorrectAnswer(null);
+        setAnsweredCorrectly(null);
+        setPointsEarned(0);
+        setTimeLeft(timeLimit);
+        setIsPaused(false);
+        setPhase("question");
+      },
+    );
+    cleanupFunctions.push(offQuestion);
 
-    const offTick = on("timer-tick", ({ timeLeft }) => {
-      setTimeLeft(timeLeft);
-    });
+    const offTick = on("timer-tick", ({ timeLeft }) => setTimeLeft(timeLeft));
+    cleanupFunctions.push(offTick);
 
-    const offAnswerReceived = on("answer-received", ({ isCorrect, pointsEarned, totalScore }) => {
-      setAnsweredCorrectly(isCorrect);
-      setPointsEarned(pointsEarned);
-      setScore(totalScore);
-      setStreak(prev => isCorrect ? prev + 1 : 0);
-    });
+    const offAnswerReceived = on(
+      "answer-received",
+      ({ isCorrect, pointsEarned, totalScore }) => {
+        setAnsweredCorrectly(isCorrect);
+        setPointsEarned(pointsEarned);
+        setScore(totalScore);
+        setStreak((prev) => (isCorrect ? prev + 1 : 0));
+      },
+    );
+    cleanupFunctions.push(offAnswerReceived);
 
     const offTimeUp = on("time-up", ({ correctAnswer, leaderboard }) => {
       setCorrectAnswer(correctAnswer);
       setPhase("reveal");
-      const me = leaderboard.find(s => s.name === myName);
+      const me = leaderboard.find((s) => s.name === myName);
       if (me) setMyRank(me.rank);
     });
+    cleanupFunctions.push(offTimeUp);
 
     const offLeaderboard = on("leaderboard-update", (leaderboard) => {
-      const me = leaderboard.find(s => s.name === myName);
-      if (me) { setMyRank(me.rank); setScore(me.score); }
+      const me = leaderboard.find((s) => s.name === myName);
+      if (me) {
+        setMyRank(me.rank);
+        setScore(me.score);
+      }
     });
+    cleanupFunctions.push(offLeaderboard);
 
-    const offAlreadyAnswered = on("already-answered", () => { setPhase("answered"); });
-    const offTooLate = on("answer-too-late", () => { });
-    const offPaused = on("quiz-paused", () => { setIsPaused(true); toast.warning("Quiz paused by teacher"); });
-    const offResumed = on("quiz-resumed", () => { setIsPaused(false); toast.success("Quiz resumed!"); });
+    const offAlreadyAnswered = on("already-answered", () =>
+      setPhase("answered"),
+    );
+    cleanupFunctions.push(offAlreadyAnswered);
+
+    const offPaused = on("quiz-paused", () => {
+      setIsPaused(true);
+      toast.warning("Quiz paused by teacher");
+    });
+    cleanupFunctions.push(offPaused);
+
+    const offResumed = on("quiz-resumed", () => {
+      setIsPaused(false);
+      toast.success("Quiz resumed!");
+    });
+    cleanupFunctions.push(offResumed);
 
     const offEnded = on("quiz-ended", ({ leaderboard, myStats }) => {
-      navigate(`/student/room/${roomId}/results`, { state: { leaderboard, myStats } });
+      navigate(`/student/room/${roomId}/results`, {
+        state: { leaderboard, myStats },
+      });
     });
+    cleanupFunctions.push(offEnded);
 
-    const offKicked = on("you-were-kicked", () => { toast.error("You were removed"); navigate("/student/dashboard"); });
-    const offClosed = on("room-closed", () => { toast.info("Room was closed"); navigate("/student/dashboard"); });
-    const offAutoClosed = on("room-auto-closed", () => { toast.info("Room was auto-closed"); navigate("/student/dashboard"); });
+    const offKicked = on("you-were-kicked", () => {
+      toast.error("You were removed from the room");
+      navigate("/student/dashboard");
+    });
+    cleanupFunctions.push(offKicked);
 
-    return () => {
-      offJoinedList(); offQuizStarted(); offQuestion(); offTick();
-      offAnswerReceived(); offTimeUp(); offLeaderboard();
-      offAlreadyAnswered(); offTooLate(); offPaused(); offResumed();
-      offEnded(); offKicked(); offClosed(); offAutoClosed();onSuccess()
-    };
-  }, [on]);
+    const offClosed = on("room-closed", () => {
+      toast.info("Room was closed by teacher");
+      navigate("/student/dashboard");
+    });
+    cleanupFunctions.push(offClosed);
+
+    const offAutoClosed = on("room-auto-closed", () => {
+      toast.info("Room was auto-closed");
+      navigate("/student/dashboard");
+    });
+    cleanupFunctions.push(offAutoClosed);
+
+    return () => cleanupFunctions.forEach((cleanup) => cleanup?.());
+  }, [on, myName, navigate, roomId]);
 
   const handleAnswer = (idx) => {
     if (phase !== "question" || !curQues) return;
     setSelected(idx);
     setPhase("answered");
+    nextQuesLoader(true);
     submitAnswer(roomId, curQues.questionIndex, idx);
   };
 
   const timerPercent = curQues ? (timeLeft / curQues.timeLimit) * 100 : 100;
-  const timerColor = timeLeft > 10 ? "#7c3aed" : timeLeft > 5 ? "#f59e0b" : "#ef4444";
-  const timerStatus = timeLeft > 10 ? "active" : "exception";
 
   if (phase === "waiting") {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: "#07070e" }}>
-        <header className="flex items-center justify-between px-6 h-14 border-b" style={{ borderColor: "#1e1e35", background: "rgba(7,7,14,0.95)" }}>
+      <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+        <header className="h-16 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md flex items-center px-6">
           <Logo size="sm" />
-          <Tag color="purple" className="font-mono text-sm font-bold tracking-widest">{roomId}</Tag>
+          <div className="ml-auto font-mono text-indigo-400 font-bold tracking-widest text-sm">
+            {roomId}
+          </div>
         </header>
 
-        <div className="flex-1 flex flex-col items-center pt-12 px-4">
+        <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <div className="text-4xl mb-3 animate-pulse">⏳</div>
-              <p className="text-white font-bold text-xl mb-1">Waiting for teacher to start</p>
-              <p className="text-gray-500 text-sm">The quiz will begin shortly</p>
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <Badge status="processing" color="green" />
-                <span className="text-green-400 text-sm font-semibold">
-                  {studentList.length} student{studentList.length !== 1 ? "s" : ""} in room
+            <div className="text-center mb-10">
+              <div className="text-5xl mb-6 animate-pulse">⏳</div>
+              <h1 className="text-2xl font-semibold mb-2">
+                Waiting for the quiz to start
+              </h1>
+              <p className="text-zinc-400">The teacher will begin shortly</p>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+              <div className="flex justify-between items-center mb-5 text-sm">
+                <span className="text-zinc-400">Students joined</span>
+                <span className="font-semibold text-emerald-400 text-lg">
+                  {studentList.length}
                 </span>
               </div>
-            </div>
 
-            <p className="text-xs text-gray-600 font-semibold uppercase tracking-widest mb-3">
-              Participants
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {studentList.map((s, i) => {
-                const isMe = s.name === myName;
-                return (
-                  <div
-                    key={s.socketId || i}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-                    style={{
-                      background: isMe ? "rgba(124,58,237,0.12)" : "#12121f",
-                      border: `1px solid ${isMe ? "rgba(124,58,237,0.35)" : "#1e1e35"}`,
-                    }}
-                  >
-                    <Avatar
-                      size={24}
-                      style={{
-                        background: isMe ? "linear-gradient(135deg,#7c3aed,#06b6d4)" : "#1e1e35",
-                        fontSize: 10, fontWeight: 700, flexShrink: 0,
-                      }}
-                    >
-                      {s.name?.[0]?.toUpperCase()}
-                    </Avatar>
-                    <span className="text-sm font-medium truncate" style={{ color: isMe ? "#a78bfa" : "#8b8ba7" }}>
-                      {s.name}{isMe && <span className="text-xs ml-1 text-gray-600">(you)</span>}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {studentList.length === 0 && (
-              <div className="text-center py-8 rounded-xl border border-dashed border-gray-800">
-                <p className="text-gray-600 text-sm">No one else yet...</p>
+              <div className="space-y-2 max-h-80 overflow-auto pr-2 custom-scrollbar">
+                {studentList.length > 0 ? (
+                  studentList.map((s, i) => {
+                    const isMe = s.name === myName;
+                    return (
+                      <div
+                        key={s.socketId || i}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${
+                          isMe
+                            ? "border-indigo-500 bg-indigo-500/10"
+                            : "border-zinc-800"
+                        }`}
+                      >
+                        <Avatar
+                          size={32}
+                          style={{
+                            background: isMe
+                              ? "linear-gradient(135deg, #6366f1, #22d3ee)"
+                              : "#27272a",
+                          }}
+                        >
+                          {s.name?.[0]?.toUpperCase()}
+                        </Avatar>
+                        <span
+                          className={
+                            isMe
+                              ? "text-indigo-400 font-medium"
+                              : "text-zinc-300"
+                          }
+                        >
+                          {s.name}{" "}
+                          {isMe && (
+                            <span className="text-xs text-zinc-500">(you)</span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-center py-8 text-zinc-500 text-sm">
+                    No other students yet...
+                  </p>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  const optionStyle = (idx) => {
-    if (phase === "answered" && selected === idx) {
-      return { bg: "rgba(124,58,237,0.2)", border: "#7c3aed", text: "#a78bfa" };
-    }
-    if (phase === "reveal") {
-      if (idx === correctAnswer) return { bg: "rgba(16,185,129,0.15)", border: "#10b981", text: "#10b981" };
-      if (selected === idx) return { bg: "rgba(239,68,68,0.12)", border: "#ef4444", text: "#ef4444" };
-      return { bg: "#0d0d18", border: "#1e1e35", text: "#4b4b68" };
-    }
-    return { bg: "#0d0d18", border: "#1e1e35", text: "#8b8ba7" };
-  };
-
-  const isLocked = phase === "answered" || phase === "reveal";
-
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#07070e" }}>
-      <header
-        className="flex items-center justify-between px-4 md:px-8 h-14 border-b"
-        style={{ background: "rgba(7,7,14,0.95)", borderColor: "#1e1e35", backdropFilter: "blur(12px)" }}
-      >
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+      <header className="h-16 border-b border-zinc-800 bg-zinc-900/90 backdrop-blur-md flex items-center px-6">
         <Logo size="sm" />
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500 font-mono hidden sm:block">{roomId}</span>
 
-          {isPaused && <Tag color="warning" icon={<ClockCircleOutlined />}>Paused</Tag>}
-
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)" }}>
-            <TrophyOutlined style={{ color: "#f59e0b", fontSize: 12 }} />
-            <span className="font-bold text-sm text-yellow-400">{score.toLocaleString()}</span>
-          </div>
-
-          {streak > 1 && (
-            <div className="flex items-center gap-1 px-3 py-1 rounded-full" style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
-              <FireOutlined style={{ color: "#ef4444", fontSize: 12 }} />
-              <span className="text-red-400 text-xs font-bold">{streak}</span>
+        <div className="ml-auto flex items-center gap-3">
+          {isPaused && (
+            <div className="text-amber-400 text-xs font-medium flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full">
+              <ClockCircleOutlined /> Paused
             </div>
           )}
 
-          <Avatar size={28} style={{ background: "linear-gradient(135deg,#7c3aed,#06b6d4)", fontSize: 11, fontWeight: 700 }}>
+          <div className="flex items-center gap-2 bg-zinc-800 px-4 py-1.5 rounded-2xl text-sm">
+            <TrophyOutlined className="text-amber-400" />
+            <span className="font-semibold tabular-nums">{score}</span>
+          </div>
+
+          {streak > 1 && (
+            <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-1.5 rounded-2xl text-sm font-medium">
+              <FireOutlined /> {streak}
+            </div>
+          )}
+
+          <Avatar
+            size={34}
+            style={{ background: "linear-gradient(135deg, #6366f1, #22d3ee)" }}
+          >
             {myName?.[0]?.toUpperCase() || "U"}
           </Avatar>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-4 py-6">
-        {curQues && (
-          <>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="flex gap-1 flex-1">
-                {Array.from({ length: totalQuestions }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 h-1.5 rounded-full transition-all"
-                    style={{
-                      background:
-                        i < curQues.questionIndex ? "#7c3aed"
-                          : i === curQues.questionIndex ? "#a78bfa"
-                            : "#1e1e35",
-                    }}
-                  />
-                ))}
-              </div>
-              <Tag color="purple" className="flex-shrink-0 font-semibold">
-                {curQues.questionNumber}/{totalQuestions}
-              </Tag>
-            </div>
-
-            {phase !== "reveal" && (
-              <div className="mb-5">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Time remaining</span>
-                  <span className="font-bold" style={{ color: timerColor }}>{timeLeft}s</span>
+      <main className="flex-1 max-w-2xl mx-auto w-full px-5 py-6">
+        <Spin
+          spinning={nextQuesLoader}
+          size="large"
+          tip="Loading next question..."
+        >
+          {curQues && (
+            <>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden flex gap-px">
+                  {Array.from({ length: totalQuestions }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-full transition-all"
+                      style={{
+                        background:
+                          i < curQues.questionIndex
+                            ? "#22d3ee"
+                            : i === curQues.questionIndex
+                              ? "#6366f1"
+                              : "#3f3f46",
+                        flex: 1,
+                      }}
+                    />
+                  ))}
                 </div>
-                <Progress
-                  percent={timerPercent}
-                  showInfo={false}
-                  strokeColor={timerColor}
-                  trailColor="#1e1e35"
-                  size={["100%", 8]}
-                  status={timerStatus}
-                  strokeLinecap="round"
-                />
+                <span className="font-mono text-xs text-zinc-400 whitespace-nowrap">
+                  {curQues.questionNumber}/{totalQuestions}
+                </span>
               </div>
-            )}
 
-            <div className="p-5 rounded-2xl mb-4" style={{ background: "#12121f", border: "1px solid #1e1e35" }}>
-              <div className="flex items-start gap-3">
-                <Avatar
-                  size={32}
-                  style={{ background: "rgba(124,58,237,0.2)", color: "#a78bfa", flexShrink: 0, fontSize: 12, fontWeight: 700 }}
-                >
-                  {curQues.questionNumber}
-                </Avatar>
-                <p className="text-base md:text-lg font-bold text-white leading-relaxed">
-                  {curQues.question}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 mb-5">
-              {curQues.options.map((opt, oi) => {
-                const s = optionStyle(oi);
-                return (
-                  <button
-                    key={oi}
-                    onClick={() => !isLocked && handleAnswer(oi)}
-                    disabled={isLocked}
-                    className="w-full flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-200"
-                    style={{
-                      background: s.bg,
-                      border: `1.5px solid ${s.border}`,
-                      cursor: isLocked ? "not-allowed" : "pointer",
-                      opacity: phase === "reveal" && oi !== correctAnswer && selected !== oi ? 0.4 : 1,
-                    }}
-                  >
+              {phase !== "reveal" && (
+                <div className="mb-6">
+                  <div className="flex justify-between text-xs text-zinc-400 mb-1.5">
+                    <span>Time left</span>
                     <span
-                      className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
-                      style={{ background: OPTION_COLORS[oi] + "25", color: OPTION_COLORS[oi] }}
+                      className="font-mono font-semibold"
+                      style={{
+                        color:
+                          timeLeft > 10
+                            ? "#67e8f9"
+                            : timeLeft > 5
+                              ? "#fbbf24"
+                              : "#f87171",
+                      }}
                     >
-                      {phase === "reveal" && oi === correctAnswer ? (
-                        <CheckOutlined style={{ color: "#10b981" }} />
-                      ) : phase === "reveal" && selected === oi && oi !== correctAnswer ? (
-                        <CloseOutlined style={{ color: "#ef4444" }} />
-                      ) : (
-                        OPTION_LABELS[oi]
-                      )}
+                      {timeLeft}s
                     </span>
-                    <span className="text-sm font-medium flex-1" style={{ color: s.text }}>
-                      {opt}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                  <Progress
+                    percent={timerPercent}
+                    showInfo={false}
+                    strokeColor={
+                      timeLeft > 10
+                        ? "#67e8f9"
+                        : timeLeft > 5
+                          ? "#fbbf24"
+                          : "#f87171"
+                    }
+                    trailColor="#27272a"
+                    strokeLinecap="round"
+                  />
+                </div>
+              )}
 
-            {phase === "answered" && (
-              <div className="p-4 rounded-2xl text-center" style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                <div className="text-2xl mb-1">✅</div>
-                <p className="font-bold text-purple-400">Answer submitted!</p>
-                <p className="text-sm text-gray-500 mt-1 animate-pulse">Waiting for others...</p>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 mb-8">
+                <div className="flex gap-4">
+                  <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center text-white font-semibold text-base flex-shrink-0">
+                    {curQues.questionNumber}
+                  </div>
+                  <p className="text-lg font-medium leading-relaxed text-zinc-100">
+                    {curQues.question}
+                  </p>
+                </div>
               </div>
-            )}
+              <div className="space-y-3">
+                {curQues.options.map((opt, idx) => {
+                  const isSelected = selected === idx;
+                  const isCorrect = phase === "reveal" && idx === correctAnswer;
+                  const isWrong =
+                    phase === "reveal" &&
+                    selected === idx &&
+                    idx !== correctAnswer;
 
-            {phase === "reveal" && (
-              <div
-                className="p-4 rounded-2xl text-center"
-                style={{
-                  background:
-                    answeredCorrectly === true ? "rgba(16,185,129,0.12)"
-                      : answeredCorrectly === false ? "rgba(239,68,68,0.12)"
-                        : "rgba(245,158,11,0.08)",
-                  border: `1px solid ${answeredCorrectly === true ? "#10b98150"
-                      : answeredCorrectly === false ? "#ef444450"
-                        : "#f59e0b50"
-                    }`,
-                }}
-              >
-                {answeredCorrectly === true ? (
-                  <>
-                    <div className="text-3xl mb-1">🎉</div>
-                    <p className="font-bold text-green-400 text-base">Correct!</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      +{pointsEarned.toLocaleString()} pts
-                      {streak > 1 && <span className="ml-2 text-red-400">🔥 {streak} streak</span>}
-                    </p>
-                  </>
-                ) : answeredCorrectly === false ? (
-                  <>
-                    <div className="text-3xl mb-1">❌</div>
-                    <p className="font-bold text-red-400 text-base">Wrong answer</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Correct: <span className="text-green-400 font-semibold">{OPTION_LABELS[correctAnswer]}</span>
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-3xl mb-1">⏱️</div>
-                    <p className="font-bold text-yellow-400 text-base">Time's up!</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Correct: <span className="text-green-400 font-semibold">{OPTION_LABELS[correctAnswer]}</span>
-                    </p>
-                  </>
-                )}
-                <p className="mt-2 text-xs text-gray-600">Next question in a moment...</p>
+                  let cardClass =
+                    "bg-zinc-900 border border-zinc-700 hover:border-zinc-600";
+                  let textClass = "text-zinc-200";
+
+                  if (isCorrect) {
+                    cardClass = "bg-emerald-500/10 border-emerald-500";
+                    textClass = "text-emerald-400";
+                  } else if (isWrong) {
+                    cardClass = "bg-red-500/10 border-red-500";
+                    textClass = "text-red-400";
+                  } else if (isSelected && phase === "answered") {
+                    cardClass = "bg-indigo-500/10 border-indigo-500";
+                    textClass = "text-indigo-400";
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => phase === "question" && handleAnswer(idx)}
+                      disabled={phase !== "question"}
+                      className={`w-full flex items-start gap-4 p-5 rounded-2xl text-left transition-all ${cardClass}`}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center font-semibold text-sm flex-shrink-0 mt-0.5"
+                        style={{
+                          background: (OPTION_COLORS[idx] || "#6366f1") + "20",
+                          color: OPTION_COLORS[idx] || "#6366f1",
+                        }}
+                      >
+                        {phase === "reveal" && isCorrect ? (
+                          <CheckOutlined />
+                        ) : phase === "reveal" && isWrong ? (
+                          <CloseOutlined />
+                        ) : (
+                          OPTION_LABELS[idx] || String.fromCharCode(65 + idx)
+                        )}
+                      </div>
+
+                      <span
+                        className={`text-base leading-relaxed ${textClass}`}
+                      >
+                        {opt}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
 
-            <div className="mt-auto pt-4 flex items-center justify-between text-xs text-gray-600">
-              <span className="flex items-center gap-1">
-                <ThunderboltOutlined />
-                Live rank:
-                <span className="text-white font-bold ml-1">{myRank ? `#${myRank}` : "--"}</span>
-              </span>
-              <span>
-                {Math.round((curQues.questionIndex / totalQuestions) * 100)}% complete
-              </span>
-            </div>
-          </>
-        )}
+              {phase === "answered" && (
+                <div className="mt-8 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-6 text-center">
+                  <p className="text-indigo-400 font-medium">
+                    Answer submitted successfully
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Waiting for the reveal...
+                  </p>
+                </div>
+              )}
+
+              {phase === "reveal" && (
+                <div
+                  className={`mt-8 rounded-2xl p-6 text-center border ${
+                    answeredCorrectly === true
+                      ? "bg-emerald-500/10 border-emerald-500"
+                      : answeredCorrectly === false
+                        ? "bg-red-500/10 border-red-500"
+                        : "bg-amber-500/10 border-amber-500"
+                  }`}
+                >
+                  {answeredCorrectly === true ? (
+                    <div>
+                      <p className="text-xl font-semibold text-emerald-400">
+                        Correct!
+                      </p>
+                      <p className="text-sm text-emerald-300 mt-1">
+                        +{pointsEarned} points{" "}
+                        {streak > 1 && `• 🔥 ${streak} streak`}
+                      </p>
+                    </div>
+                  ) : answeredCorrectly === false ? (
+                    <div>
+                      <p className="text-xl font-semibold text-red-400">
+                        Incorrect
+                      </p>
+                      <p className="text-sm text-zinc-400 mt-2">
+                        Correct answer:{" "}
+                        <span className="text-emerald-400 font-medium">
+                          Option {OPTION_LABELS[correctAnswer]}
+                        </span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xl font-semibold text-amber-400">
+                        Time's Up
+                      </p>
+                      <p className="text-sm text-zinc-400 mt-2">
+                        Correct answer:{" "}
+                        <span className="text-emerald-400 font-medium">
+                          Option {OPTION_LABELS[correctAnswer]}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-10 flex justify-between text-xs text-zinc-500">
+                <div className="flex items-center gap-1.5">
+                  <ThunderboltOutlined />
+                  Rank:{" "}
+                  <span className="text-white font-medium">
+                    #{myRank || "--"}
+                  </span>
+                </div>
+                <div>
+                  {Math.round(
+                    ((curQues.questionIndex || 0) / totalQuestions) * 100,
+                  )}
+                  % completed
+                </div>
+              </div>
+            </>
+          )}
+        </Spin>
       </main>
     </div>
   );

@@ -177,7 +177,7 @@ function processAnswer(
   }
 
   const question = room.questions[questionIndex];
-  const isCorrect = question.correctAnswer === selectedOption;
+  const isCorrect = question.correct === selectedOption;
   const timeTaken = answeredAt - room.questionStartedAt;
 
   student.answeredQuestions.push(questionIndex);

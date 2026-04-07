@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Tag, Avatar, Tooltip } from "antd";
+import { Button, Avatar, Empty } from "antd";
 import {
   PlusOutlined,
   PlayCircleOutlined,
@@ -15,38 +15,6 @@ import {
 } from "@ant-design/icons";
 import DashboardLayout from "../../components/common/DashboardLayout";
 import { useAuth } from "../../context/AuthContext";
-import { mockRooms, mockTeacherStats } from "../../data/mockData";
-
-const STAT_CARDS = (stats) => [
-  {
-    label: "Rooms Created",
-    value: stats.totalRooms,
-    icon: <ThunderboltOutlined />,
-    color: "#7c3aed",
-    bg: "rgba(124,58,237,0.12)",
-  },
-  {
-    label: "Total Students",
-    value: stats.totalStudents,
-    icon: <TeamOutlined />,
-    color: "#06b6d4",
-    bg: "rgba(6,182,212,0.12)",
-  },
-  {
-    label: "Quizzes Run",
-    value: stats.quizzesRun,
-    icon: <PlayCircleOutlined />,
-    color: "#10b981",
-    bg: "rgba(16,185,129,0.12)",
-  },
-  {
-    label: "Avg Score %",
-    value: `${stats.avgScore}%`,
-    icon: <TrophyOutlined />,
-    color: "#f59e0b",
-    bg: "rgba(245,158,11,0.12)",
-  },
-];
 
 const STATUS_CONFIG = {
   active: {
@@ -75,7 +43,7 @@ function RoomCard({ room }) {
 
   return (
     <div
-      className="p-5 rounded-2xl transition-all duration-200 cursor-pointer group"
+      className="p-6 rounded-3xl transition-all duration-200 cursor-pointer hover:border-zinc-600 group"
       style={{ background: "#12121f", border: "1px solid #1e1e35" }}
       onClick={() =>
         navigate(
@@ -85,43 +53,42 @@ function RoomCard({ room }) {
         )
       }
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-5">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <span
-              className="px-2 py-0.5 rounded-md text-xs font-semibold"
+              className="px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5"
               style={{
                 background: cfg.bg,
                 color: cfg.color,
-                border: `1px solid ${cfg.color}30`,
+                border: `1px solid ${cfg.color}40`,
               }}
             >
               {cfg.icon} {cfg.label}
             </span>
           </div>
-          <h3 className="font-bold text-txt-primary text-base truncate">
+          <h3 className="font-semibold text-lg text-white truncate group-hover:text-violet-400 transition-colors">
             {room.title}
           </h3>
-          <p className="text-xs text-txt-secondary mt-0.5 truncate">
-            {room.topic}
-          </p>
+          <p className="text-sm text-zinc-400 mt-1 truncate">{room.topic}</p>
         </div>
+
         <div
-          className="ml-3 px-3 py-1.5 rounded-lg flex-shrink-0"
+          className="ml-4 px-4 py-2 rounded-2xl flex-shrink-0 text-center"
           style={{ background: "#0d0d18", border: "1px solid #1e1e35" }}
         >
-          <div className="font-mono text-brand-light text-sm font-bold tracking-widest">
+          <div className="font-mono text-sm font-bold tracking-widest text-indigo-400">
             {room.id}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-txt-secondary mb-4">
+      <div className="flex items-center gap-5 text-sm text-zinc-400 mb-6">
         <span className="flex items-center gap-1.5">
           <TeamOutlined /> {room.students} students
         </span>
         <span className="flex items-center gap-1.5">
-          <ThunderboltOutlined /> {room.questions} questions
+          <ThunderboltOutlined /> {room.questions} Qs
         </span>
         <span className="flex items-center gap-1.5">
           <ClockCircleOutlined /> {room.duration}m
@@ -129,41 +96,32 @@ function RoomCard({ room }) {
       </div>
 
       {room.status === "completed" && room.avgScore > 0 && (
-        <div className="mb-4">
-          <div className="flex justify-between text-xs mb-1.5">
-            <span className="text-txt-secondary">Avg. Score</span>
-            <span className="text-txt-primary font-semibold">
+        <div className="mb-6">
+          <div className="flex justify-between text-xs text-zinc-400 mb-2">
+            <span>Avg. Score</span>
+            <span className="text-white font-medium">
               {room.avgScore.toLocaleString()} pts
             </span>
           </div>
-          <div
-            className="w-full h-1.5 rounded-full overflow-hidden"
-            style={{ background: "#1e1e35" }}
-          >
+          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full"
               style={{
-                width: `${(room.avgScore / 10000) * 100}%`,
-                background: "linear-gradient(90deg,#7c3aed,#06b6d4)",
+                width: `${Math.min((room.avgScore / 10000) * 100, 100)}%`,
+                background: "linear-gradient(90deg, #7c3aed, #06b6d4)",
               }}
             />
           </div>
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         {room.status === "waiting" && (
           <Button
             size="small"
             type="primary"
             icon={<PlayCircleOutlined />}
-            style={{
-              background: "linear-gradient(135deg,#7c3aed,#5b21b6)",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
-            }}
+            className="rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 border-0"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/teacher/room/${room.id}`);
@@ -172,19 +130,12 @@ function RoomCard({ room }) {
             Start Quiz
           </Button>
         )}
+
         {room.status === "active" && (
           <Button
             size="small"
-            type="primary"
             icon={<EyeOutlined />}
-            style={{
-              background: "rgba(16,185,129,0.2)",
-              border: "1px solid rgba(16,185,129,0.4)",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#10b981",
-            }}
+            className="rounded-xl text-sm font-semibold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/teacher/room/${room.id}`);
@@ -193,18 +144,12 @@ function RoomCard({ room }) {
             View Live
           </Button>
         )}
+
         {room.status === "completed" && (
           <Button
             size="small"
             icon={<TrophyOutlined />}
-            style={{
-              background: "transparent",
-              border: "1px solid #1e1e35",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#8b8ba7",
-            }}
+            className="rounded-xl text-sm font-semibold border-zinc-700 text-zinc-400 hover:text-white"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/teacher/room/${room.id}/results`);
@@ -213,7 +158,8 @@ function RoomCard({ room }) {
             View Results
           </Button>
         )}
-        <div className="ml-auto flex items-center text-txt-muted text-xs">
+
+        <div className="ml-auto text-xs text-zinc-500 flex items-center">
           {room.createdAt}
         </div>
       </div>
@@ -225,7 +171,11 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [filter, setFilter] = useState("all");
-  const stats = mockTeacherStats;
+
+  // Will be replaced with real data from API later
+  const stats = null;
+  const rooms = [];
+  const activeRoom = null;
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -234,115 +184,95 @@ export default function TeacherDashboard() {
     return "Good evening";
   };
 
-  const filtered =
-    filter === "all" ? mockRooms : mockRooms.filter((r) => r.status === filter);
+  const filteredRooms =
+    filter === "all" ? rooms : rooms.filter((r) => r.status === filter);
+
   const firstName = user?.name?.split(" ")[0] || "Teacher";
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 animate-fade-up">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-txt-primary">
+            <h1 className="text-3xl font-semibold tracking-tight">
               {greeting()}, {firstName} 👋
             </h1>
-            <p className="text-txt-secondary text-sm mt-1">
-              {user?.subject ? `${user.subject} · ` : ""}Manage your quiz rooms
-              below
-            </p>
+            <p className="text-zinc-400 mt-1">Manage your quiz rooms</p>
           </div>
+
           <Button
             type="primary"
             size="large"
             icon={<PlusOutlined />}
             onClick={() => navigate("/teacher/create-room")}
-            style={{
-              background: "linear-gradient(135deg,#7c3aed,#5b21b6)",
-              border: "none",
-              height: 46,
-              paddingInline: 24,
-              fontWeight: 700,
-              borderRadius: 12,
-            }}
+            className="h-12 px-8 text-base font-semibold rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:brightness-110"
           >
             New Room
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {STAT_CARDS(stats).map((s, i) => (
-            <div
-              key={s.label}
-              className="p-5 rounded-2xl animate-fade-up"
-              style={{
-                background: "#12121f",
-                border: "1px solid #1e1e35",
-                animationDelay: `${i * 0.07}s`,
-              }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-base"
-                style={{ background: s.bg, color: s.color }}
-              >
-                {s.icon}
-              </div>
-              <div className="text-2xl font-black text-txt-primary">
-                {s.value}
-              </div>
-              <div className="text-xs text-txt-secondary mt-0.5">{s.label}</div>
+        {/* Stats Section */}
+        <div className="mb-12">
+          <h3 className="text-lg font-medium text-zinc-400 mb-6">Overview</h3>
+
+          {stats ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+              {/* Stats cards will go here when data is available */}
             </div>
-          ))}
+          ) : (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl py-16 text-center">
+              <Empty
+                description={
+                  <div>
+                    <p className="text-zinc-400">No stats available yet</p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Create rooms and run quizzes to see overview
+                    </p>
+                  </div>
+                }
+              />
+            </div>
+          )}
         </div>
 
-        {mockRooms.some((r) => r.status === "active") && (
+        {/* Live Session Alert */}
+        {activeRoom && (
           <div
-            className="mb-6 p-4 rounded-2xl flex items-center gap-4 animate-fade-up cursor-pointer"
+            className="mb-8 p-5 rounded-3xl flex items-center gap-4 cursor-pointer hover:bg-emerald-500/5 transition-colors"
             style={{
               background: "rgba(16,185,129,0.08)",
               border: "1px solid rgba(16,185,129,0.3)",
             }}
-            onClick={() =>
-              navigate(
-                `/teacher/room/${mockRooms.find((r) => r.status === "active").id}`,
-              )
-            }
+            onClick={() => navigate(`/teacher/room/${activeRoom.id}`)}
           >
-            <span className="w-3 h-3 rounded-full bg-success animate-pulse flex-shrink-0" />
+            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
             <div className="flex-1">
-              <span className="font-semibold text-success text-sm">
-                You have a live session running!
+              <span className="font-medium text-emerald-400">
+                Live session is running
               </span>
-              <span className="text-txt-secondary text-xs ml-2">
-                {mockRooms.find((r) => r.status === "active")?.title} ·{" "}
-                {mockRooms.find((r) => r.status === "active")?.students}{" "}
-                students connected
+              <span className="text-zinc-400 text-sm ml-3">
+                {activeRoom.title} • {activeRoom.students} students
               </span>
             </div>
-            <RightOutlined style={{ color: "#10b981", fontSize: 12 }} />
+            <RightOutlined className="text-emerald-400" />
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-txt-primary text-lg">Your Rooms</h2>
-          <div
-            className="flex gap-1 p-1 rounded-xl"
-            style={{ background: "#12121f", border: "1px solid #1e1e35" }}
-          >
+        {/* Rooms Section */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold">Your Rooms</h2>
+
+          <div className="flex gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-2xl">
             {["all", "active", "waiting", "completed"].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all"
-                style={{
-                  background:
-                    filter === f
-                      ? "linear-gradient(135deg,#7c3aed,#5b21b6)"
-                      : "transparent",
-                  color: filter === f ? "#fff" : "#8b8ba7",
-                  border: "none",
-                  cursor: "pointer",
-                }}
+                className={`px-5 py-2 text-sm font-medium rounded-xl capitalize transition-all ${
+                  filter === f
+                    ? "bg-violet-600 text-white"
+                    : "text-zinc-400 hover:text-white"
+                }`}
               >
                 {f}
               </button>
@@ -350,23 +280,35 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map((room, i) => (
-            <div
-              key={room.id}
-              className="animate-fade-up"
-              style={{ animationDelay: `${i * 0.05}s` }}
+        {filteredRooms.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredRooms.map((room, i) => (
+              <RoomCard key={room.id} room={room} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl py-20 text-center">
+            <Empty
+              description={
+                <div>
+                  <p className="text-zinc-400">No rooms found</p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Create a new room to get started
+                  </p>
+                </div>
+              }
+            />
+            <Button
+              type="primary"
+              size="large"
+              icon={<PlusOutlined />}
+              onClick={() => navigate("/teacher/create-room")}
+              className="mt-6 rounded-2xl bg-violet-600 hover:bg-violet-500"
             >
-              <RoomCard room={room} />
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <div className="col-span-2 text-center py-16 text-txt-muted">
-              <div className="text-4xl mb-3">📭</div>
-              <p className="font-medium">No rooms in this category</p>
-            </div>
-          )}
-        </div>
+              Create New Room
+            </Button>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

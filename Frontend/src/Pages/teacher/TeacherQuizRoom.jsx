@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Avatar, Tag, Progress, message } from "antd";
+import { Button, Avatar, Progress } from "antd";
 import {
   PlayCircleOutlined,
   StopOutlined,
@@ -15,60 +15,60 @@ import { toast } from "react-toastify";
 import DashboardLayout from "../../components/common/DashboardLayout";
 import { OPTION_COLORS, OPTION_LABELS } from "../../data/mockData";
 import { useSocket } from "../../Services/Usesocket";
+import { useAuth } from "../../context/AuthContext";
 
 function LiveBadge() {
   return (
-    <span
-      className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
-      style={{
-        background: "rgba(16,185,129,0.15)",
-        border: "1px solid rgba(16,185,129,0.3)",
-        color: "#10b981",
-      }}
-    >
-      <span className="w-2 h-2 rounded-full bg-success animate-pulse inline-block" />
-      LIVE
-    </span>
+    <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full">
+      <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
+      <span className="text-emerald-400 text-xs font-bold tracking-widest">
+        LIVE
+      </span>
+    </div>
   );
 }
 
 function TimerRing({ timeLeft, total }) {
-  const r = 44;
-  const circ = 2 * Math.PI * r;
-  const pct = total > 0 ? timeLeft / total : 0;
-  const offset = circ * (1 - pct);
+  const radius = 48;
+  const circumference = 2 * Math.PI * radius;
+  const progress = total > 0 ? (timeLeft / total) * 100 : 0;
+  const offset = circumference - (circumference * progress) / 100;
+
   const color =
-    timeLeft > 10 ? "#7c3aed" : timeLeft > 5 ? "#f59e0b" : "#ef4444";
+    timeLeft > 15 ? "#22d3ee" : timeLeft > 8 ? "#f59e0b" : "#ef4444";
 
   return (
     <div className="relative w-28 h-28 flex items-center justify-center">
-      <svg className="absolute inset-0 -rotate-90" width="112" height="112">
+      <svg className="w-28 h-28 -rotate-90" viewBox="0 0 120 120">
         <circle
-          cx="56"
-          cy="56"
-          r={r}
+          cx="60"
+          cy="60"
+          r={radius}
           fill="none"
-          stroke="#1e1e35"
-          strokeWidth="6"
+          stroke="#27272a"
+          strokeWidth="10"
         />
         <circle
-          cx="56"
-          cy="56"
-          r={r}
+          cx="60"
+          cy="60"
+          r={radius}
           fill="none"
           stroke={color}
-          strokeWidth="6"
-          strokeDasharray={circ}
+          strokeWidth="10"
+          strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 1s linear, stroke 0.3s" }}
+          className="transition-all duration-1000 ease-linear"
         />
       </svg>
-      <div className="text-center">
-        <div className="text-3xl font-black" style={{ color }}>
+
+      <div className="absolute text-center">
+        <div className="text-3xl font-bold tabular-nums" style={{ color }}>
           {timeLeft}
         </div>
-        <div className="text-xs text-txt-muted">secs</div>
+        <div className="text-[10px] uppercase tracking-widest text-zinc-500 -mt-1">
+          SECONDS
+        </div>
       </div>
     </div>
   );
@@ -76,49 +76,53 @@ function TimerRing({ timeLeft, total }) {
 
 function LeaderboardRow({ entry, index }) {
   const medals = ["🥇", "🥈", "🥉"];
+  const isTopThree = index < 3;
+
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
-      style={{
-        background: index < 3 ? "rgba(124,58,237,0.07)" : "transparent",
-        border:
-          index < 3
-            ? "1px solid rgba(124,58,237,0.15)"
-            : "1px solid transparent",
-      }}
+      className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 ${
+        isTopThree
+          ? "bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30"
+          : "bg-zinc-900 hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
+      }`}
     >
-      <div className="w-7 text-center text-sm font-bold flex-shrink-0">
-        {index < 3 ? (
-          medals[index]
+      <div className="w-8 text-center">
+        {isTopThree ? (
+          <span className="text-2xl">{medals[index]}</span>
         ) : (
-          <span className="text-txt-muted text-xs">#{index + 1}</span>
+          <span className="text-zinc-500 font-mono text-sm">#{index + 1}</span>
         )}
       </div>
+
       <Avatar
-        size={28}
+        size={38}
+        className="ring-2 ring-offset-2 ring-offset-zinc-950 ring-zinc-700"
         style={{
-          background: "linear-gradient(135deg,#7c3aed,#06b6d4)",
-          fontSize: 11,
+          background: "linear-gradient(135deg, #6366f1, #22d3ee)",
           fontWeight: 700,
-          flexShrink: 0,
         }}
       >
-        {entry.name?.charAt(0).toUpperCase()}
+        {entry.name?.[0]?.toUpperCase() || "?"}
       </Avatar>
+
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-txt-primary truncate">
+        <div className="font-medium text-white truncate text-base">
           {entry.name}
         </div>
         {entry.streak > 1 && (
-          <div className="text-xs text-warning">🔥 {entry.streak} streak</div>
+          <div className="flex items-center gap-1 text-amber-400 text-xs mt-0.5">
+            🔥 <span>{entry.streak} streak</span>
+          </div>
         )}
       </div>
-      <div className="text-right flex-shrink-0">
-        <div className="font-bold text-txt-primary text-sm">
-          {entry.score?.toLocaleString()}
+
+      <div className="text-right">
+        <div className="text-xl font-bold text-white tabular-nums">
+          {entry.score?.toLocaleString() || 0}
         </div>
-        <div className="text-xs text-txt-muted">
-          {entry.correctAnswers}/{entry.correctAnswers + entry.wrongAnswers}
+        <div className="text-xs text-emerald-400 font-medium">
+          {entry.correctAnswers || 0} /{" "}
+          {(entry.correctAnswers || 0) + (entry.wrongAnswers || 0)}
         </div>
       </div>
     </div>
@@ -128,7 +132,7 @@ function LeaderboardRow({ entry, index }) {
 export default function TeacherQuizRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-
+  const { user } = useAuth();
   const [phase, setPhase] = useState("lobby");
   const [students, setStudents] = useState([]);
   const [curQues, setCurQues] = useState(null);
@@ -137,25 +141,27 @@ export default function TeacherQuizRoom() {
   const [answeredCount, setAnsweredCount] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [quizEnded, setQuizEnded] = useState(false);
-  const [studentList, setstudentList] = useState([]);
-  const { on, startQuiz, pauseQuiz, resumeQuiz, endQuiz } = useSocket();
+
+  const { on, startQuiz, pauseQuiz, resumeQuiz, endQuiz, rejoinAsTeacher } =
+    useSocket();
 
   useEffect(() => {
+    const cleanupFunctions = [];
+
     const offJoined = on(
       "student-joined",
-      ({ studentName, totalStudents, studentList }) => {
-        setStudents(studentList);
+      ({ studentName, studentList: updatedList }) => {
+        setStudents(updatedList || []);
         toast.success(`${studentName} joined the room`);
       },
     );
-    const studentJoin = on("student-joined", ({ studentName, studentList }) => {
-      message.success(`${studentName} Joined the room`);
-      setstudentList((prev) => [...prev, studentName]);
-    });
+    cleanupFunctions.push(offJoined);
+
     const offStarted = on("quiz-started", () => {
       setPhase("question");
       setAnsweredCount(0);
     });
+    cleanupFunctions.push(offStarted);
 
     const offQuestion = on(
       "new-question",
@@ -182,441 +188,338 @@ export default function TeacherQuizRoom() {
         setIsPaused(false);
       },
     );
+    cleanupFunctions.push(offQuestion);
 
-    const offTick = on("timer-tick", ({ timeLeft }) => {
-      console.log("left time is", timeLeft);
-      // setTimeLeft(timeLeft);
-    });
+    const offTick = on("timer-tick", ({ timeLeft: newTime }) =>
+      setTimeLeft(newTime),
+    );
+    cleanupFunctions.push(offTick);
 
     const offTimeUp = on(
       "time-up",
-      ({ questionIndex, correctAnswer, correctAnswerText, leaderboard }) => {
+      ({ correctAnswer, leaderboard: updatedLB }) => {
         setCurQues((prev) => ({ ...prev, correctAnswer }));
-        setLeaderboard(leaderboard);
+        setLeaderboard(updatedLB || []);
         setPhase("reveal");
       },
     );
+    cleanupFunctions.push(offTimeUp);
 
     const offLeaderboard = on("leaderboard-update", (data) => {
-      setLeaderboard(data);
+      setLeaderboard(data || []);
       setAnsweredCount((prev) => prev + 1);
     });
+    cleanupFunctions.push(offLeaderboard);
 
-    const offPaused = on("quiz-paused", () => {
-      setIsPaused(true);
-    });
+    const offPaused = on("quiz-paused", () => setIsPaused(true));
+    cleanupFunctions.push(offPaused);
 
-    const offResumed = on("quiz-resumed", () => {
-      setIsPaused(false);
-    });
+    const offResumed = on("quiz-resumed", () => setIsPaused(false));
+    cleanupFunctions.push(offResumed);
 
-    const offEnded = on("quiz-ended", ({ leaderboard }) => {
-      setLeaderboard(leaderboard);
+    const offEnded = on("quiz-ended", ({ leaderboard: finalLB }) => {
+      setLeaderboard(finalLB || []);
       setQuizEnded(true);
       setPhase("ended");
     });
+    const getList = on("joined-list", ({ studentList }) =>
+      setStudents(studentList || []),
+    );
+    cleanupFunctions.push(getList);
+    cleanupFunctions.push(offEnded);
 
-    const offTeacherDC = on("teacher-disconnected", () => {
-      toast.warning("Teacher disconnected — quiz paused");
-      setIsPaused(true);
-    });
-
-    return () => {
-      offJoined();
-      offStarted();
-      offQuestion();
-      offTick();
-      offTimeUp();
-      offLeaderboard();
-      offPaused();
-      offResumed();
-      offEnded();
-      offTeacherDC();
-      studentJoin();
-    };
+    return () => cleanupFunctions.forEach((cleanup) => cleanup?.());
   }, [on]);
+
   useEffect(() => {
-    if (phase !== "question" || isPaused) return;
+    rejoinAsTeacher(roomId, user?.user?.name);
+  }, []);
 
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [phase, isPaused]);
-  const handleStart = () => {
-    console.log("started");
-    startQuiz(roomId);
-  };
-
-  const handlePause = () => {
-    pauseQuiz(roomId);
-  };
-
-  const handleResume = () => {
-    resumeQuiz(roomId);
-  };
-
-  const handleEnd = () => {
-    endQuiz(roomId);
-  };
-
+  const handleStart = () => startQuiz(roomId);
+  const handlePause = () => pauseQuiz(roomId);
+  const handleResume = () => resumeQuiz(roomId);
+  const handleEnd = () => endQuiz(roomId);
   const handleViewResults = () => {
     navigate(`/teacher/room/${roomId}/results`, { state: { leaderboard } });
   };
 
+  const answeredPercentage =
+    students.length > 0
+      ? Math.round((answeredCount / students.length) * 100)
+      : 0;
+
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div
-              className="px-3 py-1.5 rounded-lg font-mono text-sm font-bold"
-              style={{
-                background: "#0d0d18",
-                border: "1px solid #1e1e35",
-                color: "#a78bfa",
-                letterSpacing: "0.1em",
-              }}
-            >
-              {roomId}
-            </div>
-            {phase !== "lobby" && phase !== "ended" && <LiveBadge />}
-            <span className="flex items-center gap-1.5 text-xs text-txt-secondary">
-              <TeamOutlined /> {students.length} students
-            </span>
-            <span className="flex items-center gap-1.5 text-xs text-success">
-              <WifiOutlined /> Connected
-            </span>
-            {isPaused && (
-              <span
-                className="px-2 py-0.5 rounded-full text-xs font-bold"
-                style={{
-                  background: "rgba(245,158,11,0.15)",
-                  color: "#f59e0b",
-                  border: "1px solid rgba(245,158,11,0.3)",
-                }}
-              >
-                PAUSED
-              </span>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            {phase === "lobby" && (
-              <Button
-                type="primary"
-                size="large"
-                icon={<PlayCircleOutlined />}
-                onClick={handleStart}
-                // disabled={students.length === 0}
-                style={{
-                  background:
-                    students.length === 0
-                      ? "#1e1e35"
-                      : "linear-gradient(135deg,#10b981,#059669)",
-                  border: "none",
-                  fontWeight: 700,
-                  borderRadius: 10,
-                }}
-              >
-                Start Quiz
-              </Button>
-            )}
-
-            {(phase === "question" || phase === "reveal") && !quizEnded && (
-              <>
-                {!isPaused ? (
-                  <Button
-                    size="large"
-                    icon={<PauseOutlined />}
-                    onClick={handlePause}
-                    style={{
-                      background: "rgba(245,158,11,0.15)",
-                      border: "1px solid rgba(245,158,11,0.3)",
-                      color: "#f59e0b",
-                      fontWeight: 600,
-                      borderRadius: 10,
-                    }}
-                  >
-                    Pause
-                  </Button>
-                ) : (
-                  <Button
-                    size="large"
-                    icon={<CaretRightOutlined />}
-                    onClick={handleResume}
-                    style={{
-                      background: "rgba(16,185,129,0.15)",
-                      border: "1px solid rgba(16,185,129,0.3)",
-                      color: "#10b981",
-                      fontWeight: 600,
-                      borderRadius: 10,
-                    }}
-                  >
-                    Resume
-                  </Button>
-                )}
-                <Button
-                  size="large"
-                  danger
-                  icon={<StopOutlined />}
-                  onClick={handleEnd}
-                  style={{ borderRadius: 10, fontWeight: 600 }}
-                >
-                  End Quiz
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 space-y-5">
-            {phase === "lobby" && (
-              <div
-                className="p-8 rounded-2xl text-center"
-                style={{ background: "#12121f", border: "1px solid #1e1e35" }}
-              >
-                <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{
-                    background: "rgba(124,58,237,0.15)",
-                    border: "1px solid rgba(124,58,237,0.3)",
-                  }}
-                >
-                  <TeamOutlined style={{ fontSize: 36, color: "#a78bfa" }} />
-                </div>
-                <h2 className="text-xl font-bold text-txt-primary mb-2">
-                  Waiting for students...
-                </h2>
-                <p className="text-txt-secondary text-sm mb-6">
-                  Share the room code with your students
-                </p>
-                <div
-                  className="inline-block px-8 py-4 rounded-2xl mb-6"
-                  style={{
-                    background: "#0d0d18",
-                    border: "2px dashed #1e1e35",
-                  }}
-                >
-                  <div className="font-mono text-4xl font-black text-white tracking-widest">
-                    {roomId}
-                  </div>
-                </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-txt-secondary">
-                  <span className="w-2 h-2 rounded-full bg-success animate-pulse inline-block" />
-                  <span className="font-semibold text-txt-primary">
-                    {students.length}
-                  </span>{" "}
-                  students joined
-                </div>
-
-                {students.length > 0 && (
-                  <div className="flex flex-wrap gap-2 justify-center mt-4">
-                    {students.map((s) => (
-                      <span
-                        key={s.socketId}
-                        className="px-3 py-1 rounded-full text-xs font-medium"
-                        style={{
-                          background: "rgba(124,58,237,0.15)",
-                          color: "#a78bfa",
-                          border: "1px solid rgba(124,58,237,0.2)",
-                        }}
-                      >
-                        {s.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
+      <div className="min-h-screen bg-zinc-950 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
+            <div className="flex items-center gap-4">
+              <div className="bg-zinc-900 border border-zinc-700 px-5 py-2.5 rounded-2xl font-mono text-lg font-bold tracking-widest text-indigo-400">
+                {roomId}
               </div>
-            )}
 
-            {(phase === "question" || phase === "reveal") && curQues && (
-              <div
-                className="p-6 rounded-2xl"
-                style={{ background: "#12121f", border: "1px solid #1e1e35" }}
-              >
-                <div className="flex items-center justify-between mb-5">
-                  <Tag
-                    style={{
-                      background: "rgba(124,58,237,0.2)",
-                      borderColor: "rgba(124,58,237,0.4)",
-                      color: "#a78bfa",
-                    }}
+              {(phase === "question" || phase === "reveal") && <LiveBadge />}
+
+              <div className="flex items-center gap-2 text-sm text-zinc-400">
+                <TeamOutlined className="text-lg" />
+                <span className="font-medium text-white">
+                  {students.length}
+                </span>
+                <span>students online</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-emerald-400 text-sm">
+                <WifiOutlined /> Connected
+              </div>
+
+              {isPaused && (
+                <div className="px-4 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full text-xs font-bold">
+                  PAUSED
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              {phase === "lobby" && (
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<PlayCircleOutlined />}
+                  onClick={handleStart}
+                  disabled={students.length === 0}
+                  className="h-11 px-8 text-sm font-semibold rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110"
+                >
+                  Start Quiz
+                </Button>
+              )}
+
+              {(phase === "question" || phase === "reveal") && !quizEnded && (
+                <>
+                  {!isPaused ? (
+                    <Button
+                      size="large"
+                      icon={<PauseOutlined />}
+                      onClick={handlePause}
+                      className="h-11 px-6 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 rounded-2xl text-sm"
+                    >
+                      Pause Quiz
+                    </Button>
+                  ) : (
+                    <Button
+                      size="large"
+                      icon={<CaretRightOutlined />}
+                      onClick={handleResume}
+                      className="h-11 px-6 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 rounded-2xl text-sm"
+                    >
+                      Resume
+                    </Button>
+                  )}
+
+                  <Button
+                    size="large"
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={handleEnd}
+                    className="h-11 px-6 rounded-2xl text-sm"
                   >
-                    Question {curQues.questionNumber} of{" "}
-                    {curQues.totalQuestions}
-                  </Tag>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-txt-secondary">
-                      <ThunderboltOutlined /> {answeredCount}/{students.length}{" "}
-                      answered
-                    </span>
+                    End Quiz
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8 space-y-8">
+              {phase === "lobby" && (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-12 text-center">
+                  <div className="mx-auto w-20 h-20 bg-zinc-800 rounded-3xl flex items-center justify-center mb-6">
+                    <TeamOutlined className="text-5xl text-indigo-400" />
+                  </div>
+
+                  <h1 className="text-3xl font-semibold mb-3">
+                    Waiting for Students
+                  </h1>
+                  <p className="text-zinc-400 text-base mb-8 max-w-md mx-auto">
+                    Share the Room ID with your students to join
+                  </p>
+
+                  <div className="bg-zinc-950 border-2 border-dashed border-zinc-700 rounded-2xl py-8 px-10 inline-block mb-8">
+                    <div className="font-mono text-5xl font-black tracking-[0.4em] text-white">
+                      {roomId}
+                    </div>
+                  </div>
+
+                  <div className="text-zinc-400 text-base">
+                    <span className="font-semibold text-white">
+                      {students.length}
+                    </span>{" "}
+                    students have joined
+                  </div>
+
+                  {students.length > 0 && (
+                    <div className="flex flex-wrap gap-2 justify-center mt-6">
+                      {students.slice(0, 8).map((student, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-zinc-800 text-zinc-300 px-4 py-1.5 rounded-full text-sm flex items-center gap-2"
+                        >
+                          <Avatar size={20} className="bg-indigo-600 text-xs">
+                            {student.name?.[0]?.toUpperCase()}
+                          </Avatar>
+                          {student.name}
+                        </div>
+                      ))}
+                      {students.length > 8 && (
+                        <div className="text-xs text-zinc-500 px-4 py-1.5">
+                          +{students.length - 8} more
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(phase === "question" || phase === "reveal") && curQues && (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <div className="uppercase tracking-widest text-xs text-zinc-500 mb-1">
+                        QUESTION {curQues.questionNumber} /{" "}
+                        {curQues.totalQuestions}
+                      </div>
+                      <h2 className="text-xl font-semibold leading-tight text-white">
+                        {curQues.question}
+                      </h2>
+                    </div>
+
                     {phase === "question" && !isPaused && (
                       <TimerRing
                         timeLeft={timeLeft}
                         total={curQues.timeLimit}
                       />
                     )}
-                    {isPaused && (
-                      <span
-                        className="px-3 py-1 rounded-lg text-sm font-bold"
-                        style={{
-                          background: "rgba(245,158,11,0.2)",
-                          color: "#f59e0b",
-                          border: "1px solid rgba(245,158,11,0.3)",
-                        }}
-                      >
-                        Paused
-                      </span>
-                    )}
-                    {phase === "reveal" && (
-                      <span
-                        className="px-3 py-1 rounded-lg text-sm font-bold"
-                        style={{
-                          background: "rgba(16,185,129,0.2)",
-                          color: "#10b981",
-                          border: "1px solid rgba(16,185,129,0.3)",
-                        }}
-                      >
-                        Time's up!
-                      </span>
-                    )}
                   </div>
-                </div>
 
-                <h2 className="text-lg font-bold text-txt-primary mb-5 leading-relaxed">
-                  {curQues.question}
-                </h2>
-
-                <Progress
-                  percent={
-                    students.length > 0
-                      ? Math.round((answeredCount / students.length) * 100)
-                      : 0
-                  }
-                  size="small"
-                  strokeColor={{ from: "#7c3aed", to: "#06b6d4" }}
-                  showInfo={false}
-                  className="mb-5"
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {curQues.options.map((opt, ind) => {
-                    const isCorrect =
-                      phase === "reveal" && ind === curQues.correctAnswer;
-                    return (
-                      <div
-                        key={ind}
-                        className="flex items-center gap-3 p-4 rounded-xl"
-                        style={{
-                          background: isCorrect
-                            ? "rgba(16,185,129,0.12)"
-                            : "#0d0d18",
-                          border: `1.5px solid ${isCorrect ? "#10b981" : "#1e1e35"}`,
-                        }}
-                      >
-                        <span
-                          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0"
-                          style={{
-                            background:
-                              (OPTION_COLORS[ind] || "#7c3aed") + "25",
-                            color: OPTION_COLORS[ind] || "#7c3aed",
-                          }}
-                        >
-                          {OPTION_LABELS[ind] || String.fromCharCode(65 + ind)}
-                        </span>
-                        <span className="text-sm text-txt-primary font-medium flex-1">
-                          {opt}
-                        </span>
-                        {isCorrect && (
-                          <span className="ml-auto text-success text-sm font-bold">
-                            ✓
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {phase === "ended" && (
-              <div
-                className="p-10 rounded-2xl text-center"
-                style={{ background: "#12121f", border: "1px solid #1e1e35" }}
-              >
-                <div className="text-5xl mb-4">🎉</div>
-                <h2 className="text-2xl font-bold text-txt-primary mb-2">
-                  Quiz Complete!
-                </h2>
-                <p className="text-txt-secondary text-sm mb-6">
-                  All questions done. Ready to see the full results?
-                </p>
-                <Button
-                  type="primary"
-                  size="large"
-                  icon={<TrophyOutlined />}
-                  onClick={handleViewResults}
-                  style={{
-                    background: "linear-gradient(135deg,#f59e0b,#d97706)",
-                    border: "none",
-                    height: 48,
-                    paddingInline: 36,
-                    fontWeight: 700,
-                    borderRadius: 12,
-                  }}
-                >
-                  View Full Results
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div
-              className="p-5 rounded-2xl sticky top-20"
-              style={{ background: "#12121f", border: "1px solid #1e1e35" }}
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <TrophyOutlined style={{ color: "#f59e0b" }} />
-                <h3 className="font-bold text-txt-primary text-sm">
-                  Live Leaderboard
-                </h3>
-                {phase !== "lobby" && (
-                  <span
-                    className="ml-auto text-xs px-2 py-0.5 rounded-full font-semibold"
-                    style={{
-                      background: "rgba(124,58,237,0.2)",
-                      color: "#a78bfa",
-                    }}
-                  >
-                    LIVE
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-1.5 max-h-[520px] overflow-auto">
-                {leaderboard.length === 0 ? (
-                  <div className="text-center py-8 text-txt-muted text-sm">
-                    Leaderboard updates as students answer
-                  </div>
-                ) : (
-                  leaderboard.map((entry, i) => (
-                    <LeaderboardRow
-                      key={entry.socketId || entry.name}
-                      entry={entry}
-                      index={i}
+                  <div className="mb-8">
+                    <Progress
+                      percent={answeredPercentage}
+                      strokeColor={{ from: "#6366f1", to: "#22d3ee" }}
+                      showInfo={false}
+                      className="h-2"
                     />
-                  ))
-                )}
+                    <div className="flex justify-between text-xs text-zinc-400 mt-2">
+                      <span>{answeredCount} answered</span>
+                      <span>{students.length} total</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {curQues.options.map((opt, idx) => {
+                      const isCorrect =
+                        phase === "reveal" && idx === curQues.correctAnswer;
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-5 rounded-2xl border transition-all flex items-start gap-4 text-sm ${
+                            isCorrect
+                              ? "border-emerald-500 bg-emerald-500/10"
+                              : "border-zinc-700 hover:border-zinc-600 bg-zinc-950"
+                          }`}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
+                            style={{
+                              background:
+                                (OPTION_COLORS[idx] || "#6366f1") + "20",
+                              color: OPTION_COLORS[idx] || "#6366f1",
+                            }}
+                          >
+                            {OPTION_LABELS[idx] ||
+                              String.fromCharCode(65 + idx)}
+                          </div>
+
+                          <div className="flex-1 pt-0.5">
+                            <p className="text-zinc-200 leading-relaxed">
+                              {opt}
+                            </p>
+                          </div>
+
+                          {isCorrect && (
+                            <div className="text-emerald-500 text-xl">✓</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {phase === "reveal" && (
+                    <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-center text-emerald-400 text-sm font-medium">
+                      Time's up! Correct answer revealed.
+                    </div>
+                  )}
+
+                  {isPaused && (
+                    <div className="mt-6 text-center text-amber-400 text-sm font-medium">
+                      Quiz is currently paused
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {phase === "ended" && (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-12 text-center">
+                  <div className="text-6xl mb-4">🏆</div>
+                  <h2 className="text-3xl font-semibold mb-2">
+                    Quiz Completed!
+                  </h2>
+                  <p className="text-zinc-400 mb-8">
+                    All questions have been answered.
+                  </p>
+
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<TrophyOutlined />}
+                    onClick={handleViewResults}
+                    className="h-12 px-10 text-base font-semibold rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500"
+                  >
+                    View Full Results
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="lg:col-span-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sticky top-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <TrophyOutlined className="text-xl text-amber-400" />
+                    <h3 className="text-lg font-semibold">Live Leaderboard</h3>
+                  </div>
+                  {(phase === "question" || phase === "reveal") && (
+                    <div className="text-xs bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full">
+                      LIVE
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 max-h-[580px] overflow-y-auto pr-2 custom-scrollbar">
+                  {leaderboard.length === 0 ? (
+                    <div className="text-center py-12 text-zinc-500 text-sm">
+                      Leaderboard updates as students answer
+                    </div>
+                  ) : (
+                    leaderboard.map((entry, index) => (
+                      <LeaderboardRow
+                        key={entry.socketId || index}
+                        entry={entry}
+                        index={index}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>

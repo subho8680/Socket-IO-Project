@@ -22,6 +22,7 @@ export function useSocket() {
   }, []);
 
   const joinRoom = useCallback((roomId, studentName) => {
+    console.log(`Joining room ${roomId} as ${studentName}`);
     socket?.emit("join-room", { roomId, studentName });
   }, []);
 
