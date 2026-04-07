@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
-import socket from "../SocketConnection.js"
+import socket from "../SocketConnection.js";
 const SERVER_URL = "http://localhost:8000";
 
 export function useSocket() {
@@ -10,11 +10,15 @@ export function useSocket() {
     if (!socket.connected) {
       socket.connect();
     }
-    socketRef.current = socket
+    socketRef.current = socket;
     return () => {};
   }, []);
   const createRoom = useCallback((teacherName, questions) => {
     socket?.emit("create-room", { teacherName, questions });
+  }, []);
+
+  const giveList = useCallback((roomId) => {
+    socket?.emit("live-list", { roomId });
   }, []);
 
   const joinRoom = useCallback((roomId, studentName) => {
@@ -86,5 +90,6 @@ export function useSocket() {
     rejoinAsTeacher,
     rejoinAsStudent,
     on,
+    giveList
   };
 }

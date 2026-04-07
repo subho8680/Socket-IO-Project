@@ -13,8 +13,15 @@ export const registerTeacher = async (req, res) => {
       });
     }
     const newUser = await teacherModel.create({ name, email, password });
+    const tokenData = {
+      userId: newUser._id,
+      userType: "Teacher",
+    };
+    const day = 24 * 60 * 60 * 1000;
+    const token = jwt.sign(tokenData, process.env.SECRET_KEY);
+    res.cookie("token", token, { maxAge: day });
     return res.status(201).json({
-      msg: "User Created Successfully",
+      msg: "User Logged in Successfully",
       success: true,
       user: newUser,
     });
@@ -60,27 +67,71 @@ export const getAllQuizes = async (req, res) => {
   const userId = req.id;
 };
 
+// export const createQuiz = async (req, res) => {
+//   try {
+//     const userId = req.id;
+//     const { topic, quesNo, description } = req.body;
+
+//     const existingQuiz = await quizModel.findOne({
+//       name: topic,
+//       "meta.quesNo": quesNo,
+//       "meta.description": description,
+//     });
+
+//     if (existingQuiz) {
+//       return res.status(200).json({
+//         msg: "Quiz fetched from database",
+//         quiz: existingQuiz,
+//         success: true,
+//       });
+//     }
+
+//     const quizQuestions = await quizCreate({ topic, quesNo, description });
+
+//     const quiz = await quizModel.create({
+//       name: topic,
+//       questions: quizQuestions,
+//       createdBy: userId,
+//       meta: {
+//         quesNo,
+//         description,
+//       },
+//     });
+
+//     return res.status(201).json({
+//       msg: "Quiz created Successfully",
+//       quiz: quiz,
+//       success: true,
+//     });
+//   } catch (e) {
+//     console.log(e);
+//   }
+// };
+
 export const createQuiz = async (req, res) => {
   try {
-    const userId = req.id;
-    const { topic, quesNo,description } = req.body;
-    const quizQuestions = await quizCreate({ topic, quesNo,description });
-    const quiz = await quizModel.create({
-      name: topic,
-      questions: quizQuestions,
-      createdBy: userId,
-    });
+    const quiz = await quizModel.aggregate([
+      { $match: { questions: { $exists: true, $ne: [] } } },
+      { $sample: { size: 1 } }
+    ]);
 
-    return res.status(201).json({
-      msg: "quiz created Successfully",
-      quiz: quiz,
+    if (!quiz.length) {
+      return res.status(404).json({
+        msg: "No quizzes available",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      msg: "Random quiz fetched",
+      quiz: quiz[0],
       success: true,
     });
+
   } catch (e) {
     console.log(e);
   }
 };
-
 export const logOut = async (req, res) => {
   try {
     const id = req.id;

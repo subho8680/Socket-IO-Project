@@ -25,24 +25,38 @@ export default function LoginPage() {
       email: values.email,
       password: values.password,
     };
-    let res, newData;
+    let res, newData, f = 0;
     if (role === "teacher") {
       res = await loginTeacher(formData);
-      newData = {
-        ...res,
-        role: "teacher",
-      };
+      if (res.success) {
+        f = 1
+        newData = {
+          ...res,
+          role: "teacher",
+        };
+      }
+      else {
+        message.error(res.msg)
+      }
     } else {
       res = await loginStudent(formData);
-      newData = {
-        ...res,
-        role: "student",
-      };
+      if (res.success) {
+        f = 1
+        newData = {
+          ...res,
+          role: "student",
+        };
+      }
+      else {
+        message.error(res.msg)
+      }
+    }
+    if (f) {
+      login(newData);
+      message.success(`Welcome back!`);
+      navigate(role === "teacher" ? "/teacher/dashboard" : "/student/dashboard");
     }
 
-    login(newData);
-    message.success(`Welcome back!`);
-    navigate(role === "teacher" ? "/teacher/dashboard" : "/student/dashboard");
     setLoading(false);
   };
 
@@ -89,15 +103,15 @@ export default function LoginPage() {
           <div className="space-y-3">
             {(isTeacher
               ? [
-                  "Create unlimited quiz rooms",
-                  "AI generates questions for you",
-                  "Live leaderboard control",
-                ]
+                "Create unlimited quiz rooms",
+                "AI generates questions for you",
+                "Live leaderboard control",
+              ]
               : [
-                  "Join rooms instantly with a code",
-                  "Compete on live leaderboard",
-                  "Get AI-powered feedback",
-                ]
+                "Join rooms instantly with a code",
+                "Compete on live leaderboard",
+                "Get AI-powered feedback",
+              ]
             ).map((item) => (
               <div
                 key={item}

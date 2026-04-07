@@ -42,6 +42,15 @@ export const connectSocket = (io) => {
       });
     });
 
+    socket.on("live-list", ({ roomId }) => {
+      const room = rm.getRoom(roomId);
+      socket.emit("take-list", {
+        listStu: room.students.map((s) => ({
+          name: s.name,
+          socketId: s.socketId,
+        })),
+      });
+    });
     socket.on("join-room", ({ roomId, studentName }) => {
       const room = rm.getRoom(roomId);
 
@@ -74,11 +83,14 @@ export const connectSocket = (io) => {
       socket.studentName = studentName.trim();
 
       console.log(`👤 ${studentName} joined room ${roomId}`);
-
       socket.emit("join-success", {
         roomId,
         studentName: student.name,
         totalStudents: room.students.length,
+        studentList: room.students.map((s) => ({
+          name: s.name,
+          socketId: s.socketId,
+        })),
       });
       io.to(roomId).emit("joined-list", {
         studentList: room.students.map((s) => ({
