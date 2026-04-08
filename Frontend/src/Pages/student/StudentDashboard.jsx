@@ -46,7 +46,7 @@ export default function StudentDashboard() {
     }
 
     setJoining(true);
-    joinRoom(code, user?.user?.name);
+    joinRoom(code, user?.user?.name,user?.user?._id);
   };
 
   useEffect(() => {

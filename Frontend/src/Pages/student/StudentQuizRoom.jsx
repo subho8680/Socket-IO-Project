@@ -19,8 +19,10 @@ export default function StudentQuizRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { on, submitAnswer, giveList } = useSocket();
-  const myName = user?.user?.name;
+  const { on, submitAnswer, giveList, rejoinAsStudent } = useSocket();
+
+  const myUserId = user?.user?._id || user?._id;
+  const myName = user?.user?.name || user?.name;
 
   const [phase, setPhase] = useState("waiting");
   const [studentList, setStudentList] = useState([]);
@@ -35,28 +37,60 @@ export default function StudentQuizRoom() {
   const [isPaused, setIsPaused] = useState(false);
   const [correctAnswer, setCorrectAnswer] = useState(null);
   const [answeredCorrectly, setAnsweredCorrectly] = useState(null);
-  const [nextQuesLoader, setnextQuesLoader] = useState(false);
+  const [nextQuesLoader, setNextQuesLoader] = useState(false);
+  const [hasAnsweredCurrent, setHasAnsweredCurrent] = useState(false);
+  console.log("selected index is and correctlyanswer", selected + " " + answeredCorrectly);
   useEffect(() => {
+    if (!myUserId || !roomId) return;
+
+    rejoinAsStudent(roomId);
+
     giveList(roomId);
-  }, [roomId, giveList]);
+  }, [roomId, myUserId, rejoinAsStudent, giveList]);
 
   useEffect(() => {
     const cleanupFunctions = [];
 
-    const offJoinedList = on("joined-list", ({ studentList }) =>
-      setStudentList(studentList || []),
-    );
+    const offJoinedList = on("joined-list", ({ studentList }) => {
+      setStudentList(studentList || []);
+    });
     cleanupFunctions.push(offJoinedList);
 
-    const getList = on("take-list", ({ listStu }) =>
-      setStudentList(listStu || []),
-    );
+    const getList = on("take-list", ({ listStu }) => {
+      setStudentList(listStu || []);
+    });
     cleanupFunctions.push(getList);
 
-    const onSuccess = on("join-success", ({ studentList }) =>
-      setStudentList(studentList || []),
-    );
-    cleanupFunctions.push(onSuccess);
+    const offRejoinSuccess = on("rejoin-success", (data) => {
+      setStudentList(data.studentList || []);
+      setTotalQuestions(data.totalQuestions || 0);
+      setScore(data.score || 0);
+
+      if (data.status === "active" && data.question) {
+        const q = data.question;
+        setCurQues({
+          questionIndex: q.questionIndex,
+          question: q.question,
+          options: q.options,
+          questionNumber: q.questionIndex + 1,
+        });
+
+        setTimeLeft(q.timeLeft || 30);
+        setHasAnsweredCurrent(q.hasAnsweredCurrent || false);
+        setPhase("question");
+
+        if (q.hasAnsweredCurrent) {
+          setPhase("answered");
+          // setSelected(null);
+          setSelected(q.lastSelectedOption ?? null);
+          setPointsEarned(q.pointsEarned || 0);
+          setHasAnsweredCurrent(true);
+        }
+      } else if (data.status === "waiting") {
+        setPhase("waiting");
+      }
+    });
+    cleanupFunctions.push(offRejoinSuccess);
 
     const offQuizStarted = on("quiz-started", ({ totalQuestions, message }) => {
       setTotalQuestions(totalQuestions);
@@ -74,7 +108,7 @@ export default function StudentQuizRoom() {
         totalQuestions,
         questionNumber,
       }) => {
-        setnextQuesLoader(false);
+        setNextQuesLoader(true);
         setCurQues({
           questionIndex,
           question,
@@ -88,8 +122,10 @@ export default function StudentQuizRoom() {
         setAnsweredCorrectly(null);
         setPointsEarned(0);
         setTimeLeft(timeLimit);
+        setHasAnsweredCurrent(false);
         setIsPaused(false);
         setPhase("question");
+        setNextQuesLoader(false);
       },
     );
     cleanupFunctions.push(offQuestion);
@@ -104,6 +140,7 @@ export default function StudentQuizRoom() {
         setPointsEarned(pointsEarned);
         setScore(totalScore);
         setStreak((prev) => (isCorrect ? prev + 1 : 0));
+        setHasAnsweredCurrent(true);
       },
     );
     cleanupFunctions.push(offAnswerReceived);
@@ -111,13 +148,14 @@ export default function StudentQuizRoom() {
     const offTimeUp = on("time-up", ({ correctAnswer, leaderboard }) => {
       setCorrectAnswer(correctAnswer);
       setPhase("reveal");
-      const me = leaderboard.find((s) => s.name === myName);
+
+      const me = leaderboard.find((s) => s.userId === myUserId);
       if (me) setMyRank(me.rank);
     });
     cleanupFunctions.push(offTimeUp);
 
     const offLeaderboard = on("leaderboard-update", (leaderboard) => {
-      const me = leaderboard.find((s) => s.name === myName);
+      const me = leaderboard.find((s) => s.userId === myUserId);
       if (me) {
         setMyRank(me.rank);
         setScore(me.score);
@@ -125,9 +163,10 @@ export default function StudentQuizRoom() {
     });
     cleanupFunctions.push(offLeaderboard);
 
-    const offAlreadyAnswered = on("already-answered", () =>
-      setPhase("answered"),
-    );
+    const offAlreadyAnswered = on("already-answered", () => {
+      setPhase("answered");
+      setHasAnsweredCurrent(true);
+    });
     cleanupFunctions.push(offAlreadyAnswered);
 
     const offPaused = on("quiz-paused", () => {
@@ -161,24 +200,20 @@ export default function StudentQuizRoom() {
     });
     cleanupFunctions.push(offClosed);
 
-    const offAutoClosed = on("room-auto-closed", () => {
-      toast.info("Room was auto-closed");
-      navigate("/student/dashboard");
-    });
-    cleanupFunctions.push(offAutoClosed);
-
     return () => cleanupFunctions.forEach((cleanup) => cleanup?.());
-  }, [on, myName, navigate, roomId]);
+  }, [on, myUserId, navigate, roomId]);
 
   const handleAnswer = (idx) => {
-    if (phase !== "question" || !curQues) return;
+    if (phase !== "question" || !curQues || hasAnsweredCurrent) return;
+
     setSelected(idx);
     setPhase("answered");
-    nextQuesLoader(true);
     submitAnswer(roomId, curQues.questionIndex, idx);
   };
 
-  const timerPercent = curQues ? (timeLeft / curQues.timeLimit) * 100 : 100;
+  const timerPercent = curQues
+    ? (timeLeft / (curQues.timeLimit || 30)) * 100
+    : 100;
 
   if (phase === "waiting") {
     return (
@@ -211,10 +246,10 @@ export default function StudentQuizRoom() {
               <div className="space-y-2 max-h-80 overflow-auto pr-2 custom-scrollbar">
                 {studentList.length > 0 ? (
                   studentList.map((s, i) => {
-                    const isMe = s.name === myName;
+                    const isMe = s.userId === myUserId;
                     return (
                       <div
-                        key={s.socketId || i}
+                        key={s.userId || s.socketId || i}
                         className={`flex items-center gap-3 px-4 py-3 rounded-2xl border ${
                           isMe
                             ? "border-indigo-500 bg-indigo-500/10"
@@ -366,6 +401,7 @@ export default function StudentQuizRoom() {
                   </p>
                 </div>
               </div>
+
               <div className="space-y-3">
                 {curQues.options.map((opt, idx) => {
                   const isSelected = selected === idx;
@@ -393,8 +429,8 @@ export default function StudentQuizRoom() {
                   return (
                     <button
                       key={idx}
-                      onClick={() => phase === "question" && handleAnswer(idx)}
-                      disabled={phase !== "question"}
+                      onClick={() => handleAnswer(idx)}
+                      disabled={phase !== "question" || hasAnsweredCurrent}
                       className={`w-full flex items-start gap-4 p-5 rounded-2xl text-left transition-all ${cardClass}`}
                     >
                       <div

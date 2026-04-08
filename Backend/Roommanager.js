@@ -19,6 +19,7 @@ function getLeaderboard(roomId) {
     })
     .map((s, index) => ({
       rank: index + 1,
+      userId: s.studentId,
       socketId: s.socketId,
       name: s.name,
       score: s.score,
@@ -35,13 +36,14 @@ function calculatePoints(timeTakenMs, timeLimit) {
   return BASE_POINTS + speedBonus;
 }
 
-function createRoom(teacherSocketId, teacherName, questions) {
+function createRoom(teacherSocketId, teacherName, questions, teacherId) {
   const roomId = generateRoomId();
   rooms[roomId] = {
     roomId,
     teacher: {
       socketId: teacherSocketId,
       name: teacherName,
+      teacherId: teacherId || null,
     },
     students: [],
     questions: questions || [],
@@ -80,12 +82,16 @@ function clearRoomTimers(roomId) {
   room.timers = {};
 }
 
-function addStudent(roomId, socketId, studentName) {
+function addStudent(roomId, socketId, studentName, studentId) {
   const room = rooms[roomId];
   if (!room) return null;
 
-  const existing = room.students.find((s) => s.socketId === socketId);
-  if (existing) return existing;
+  const existing = room.students.find((s) => s.studentId === studentId);
+  if (existing) {
+    existing.socketId = socketId;
+    existing.name = studentName;
+    return existing;
+  }
 
   const student = {
     socketId,
@@ -97,27 +103,28 @@ function addStudent(roomId, socketId, studentName) {
     lastAnsweredAt: Infinity,
     answeredQuestions: [],
     joinedAt: Date.now(),
+    studentId: studentId || null,
   };
   room.students.push(student);
   return student;
 }
 
-function removeStudent(roomId, socketId) {
+function removeStudent(roomId, studentId) {
   const room = rooms[roomId];
   if (!room) return null;
-  const student = room.students.find((s) => s.socketId === socketId);
-  room.students = room.students.filter((s) => s.socketId !== socketId);
+  const student = room.students.find((s) => s.studentId === studentId);
+  room.students = room.students.filter((s) => s.studentId !== studentId);
   return student;
 }
 
-function getStudent(roomId, socketId) {
+function getStudent(roomId, studentId) {
   const room = rooms[roomId];
   if (!room) return null;
-  return room.students.find((s) => s.socketId === socketId) || null;
+  return room.students.find((s) => s.studentId === studentId) || null;
 }
 
-function hasStudentAnswered(roomId, socketId, questionIndex) {
-  const student = getStudent(roomId, socketId);
+function hasStudentAnswered(roomId, studentId, questionIndex) {
+  const student = getStudent(roomId, studentId);
   if (!student) return false;
   return student.answeredQuestions.includes(questionIndex);
 }
@@ -163,16 +170,16 @@ function endQuiz(roomId) {
 
 function processAnswer(
   roomId,
-  socketId,
+  studentId,
   questionIndex,
   selectedOption,
   answeredAt,
 ) {
   const room = rooms[roomId];
-  const student = getStudent(roomId, socketId);
+  const student = getStudent(roomId, studentId);
   if (!room || !student) return null;
 
-  if (hasStudentAnswered(roomId, socketId, questionIndex)) {
+  if (hasStudentAnswered(roomId, studentId, questionIndex)) {
     return { alreadyAnswered: true };
   }
 
@@ -182,7 +189,7 @@ function processAnswer(
 
   student.answeredQuestions.push(questionIndex);
   student.lastAnsweredAt = answeredAt;
-
+  student.lastSelectedOption = selectedOption;
   if (isCorrect) {
     const points = calculatePoints(timeTaken, question.timeLimit);
     student.score += points;

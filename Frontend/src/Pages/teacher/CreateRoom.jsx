@@ -268,7 +268,7 @@ export default function CreateRoom() {
 
     setLaunching(true);
     try {
-      createRoom(user.user.name, questions);
+      createRoom(user.user.name, questions,user.user._id);
     } catch (err) {
       message.error("Failed to launch room");
     } finally {

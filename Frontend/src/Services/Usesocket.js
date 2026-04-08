@@ -13,17 +13,17 @@ export function useSocket() {
     socketRef.current = socket;
     return () => {};
   }, []);
-  const createRoom = useCallback((teacherName, questions) => {
-    socket?.emit("create-room", { teacherName, questions });
+  const createRoom = useCallback((teacherName, questions,teacherId) => {
+    socket?.emit("create-room", { teacherName, questions, teacherId });
   }, []);
 
   const giveList = useCallback((roomId) => {
     socket?.emit("live-list", { roomId });
   }, []);
 
-  const joinRoom = useCallback((roomId, studentName) => {
+  const joinRoom = useCallback((roomId, studentName,studentId) => {
     console.log(`Joining room ${roomId} as ${studentName}`);
-    socket?.emit("join-room", { roomId, studentName });
+    socket?.emit("join-room", { roomId, studentName, studentId });
   }, []);
 
   const startQuiz = useCallback((roomId) => {
@@ -66,8 +66,8 @@ export function useSocket() {
     socket?.emit("rejoin-as-teacher", { roomId, teacherName });
   }, []);
 
-  const rejoinAsStudent = useCallback((roomId, studentName) => {
-    socket?.emit("rejoin-as-student", { roomId, studentName });
+  const rejoinAsStudent = useCallback((roomId) => {
+    socket?.emit("rejoin-as-student", { roomId});
   }, []);
 
   const on = useCallback((event, callback) => {

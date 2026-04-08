@@ -32,26 +32,21 @@ export default function AppRouter() {
 
     return (
         <Routes>
-            {/* Public */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={user ? <Navigate to={user.role === 'teacher' ? teacherHome : studentHome} replace /> : <LoginPage />} />
             <Route path="/signup" element={user ? <Navigate to={user.role === 'teacher' ? teacherHome : studentHome} replace /> : <SignupPage />} />
 
-            {/* Teacher routes */}
             <Route path="/teacher/dashboard" element={<PrivateRoute role="teacher"><TeacherDashboard /></PrivateRoute>} />
             <Route path="/teacher/create-room" element={<PrivateRoute role="teacher"><CreateRoom /></PrivateRoute>} />
             <Route path="/teacher/room/:roomId" element={<PrivateRoute role="teacher"><TeacherQuizRoom /></PrivateRoute>} />
             <Route path="/teacher/room/:roomId/results" element={<PrivateRoute role="teacher"><QuizResults /></PrivateRoute>} />
 
-            {/* Student routes */}
             <Route path="/student/dashboard" element={<PrivateRoute role="student"><StudentDashboard /></PrivateRoute>} />
             <Route path="/student/room/:roomId" element={<PrivateRoute role="student"><StudentQuizRoom /></PrivateRoute>} />
             <Route path="/student/room/:roomId/results" element={<PrivateRoute role="student"><StudentResults /></PrivateRoute>} />
 
-            {/* Shared */}
             <Route path="/room/:roomId/waiting" element={<PrivateRoute><WaitingRoom /></PrivateRoute>} />
 
-            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     )
