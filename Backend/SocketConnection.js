@@ -268,10 +268,17 @@ export const connectSocket = (io) => {
       rm.deleteRoom(roomId);
     });
 
-    socket.on("rejoin-as-teacher", ({ roomId, teacherName }) => {
+    socket.on("rejoin-as-teacher", ({ roomId }) => {
       const room = rm.getRoom(roomId);
       if (!room) {
         socket.emit("join-error", { message: "Room no longer exists." });
+        return;
+      }
+
+      if (room.teacher.teacherId !== socket.userid) {
+        socket.emit("join-error", {
+          message: "You are not the teacher of this room.",
+        });
         return;
       }
 
@@ -279,7 +286,30 @@ export const connectSocket = (io) => {
       socket.join(roomId);
       socket.roomId = roomId;
       socket.role = "teacher";
-      socket.teacherName = teacherName;
+      socket.teacherName = room.teacher.name;
+      socket.teacherId = room.teacher.teacherId;
+
+      let currentQuestionDetails = null;
+      if (room.status === "active") {
+        const qIndex = room.currentQuestion;
+        const question = room.questions[qIndex];
+        const timeElapsedSec = room.questionStartedAt
+          ? Math.floor((Date.now() - room.questionStartedAt) / 1000)
+          : 0;
+        const timeLeft = Math.max(
+          0,
+          (question.timeLimit || 30) - timeElapsedSec,
+        );
+
+        currentQuestionDetails = {
+          questionIndex: qIndex,
+          question: question.question,
+          options: question.options,
+          timeLeft,
+          questionNumber: qIndex + 1,
+          totalQuestions: room.questions.length,
+        };
+      }
 
       socket.emit("rejoin-success", {
         roomId,
@@ -287,21 +317,25 @@ export const connectSocket = (io) => {
         currentQuestion: room.currentQuestion,
         totalQuestions: room.questions.length,
         studentList: room.students.map((s) => ({
+          userId: s.studentId,
           name: s.name,
           socketId: s.socketId,
         })),
         leaderboard: rm.getLeaderboard(roomId),
+        currentQuestionDetails,
       });
 
       io.to(roomId).emit("teacher-reconnected", {
-        message: "Teacher reconnected!",
+        message: "Teacher is back online",
       });
       io.to(roomId).emit("joined-list", {
         studentList: room.students.map((s) => ({
+          userId: s.studentId,
           name: s.name,
           socketId: s.socketId,
         })),
       });
+
       console.log(`🔄 Teacher rejoined room ${roomId}`);
     });
 

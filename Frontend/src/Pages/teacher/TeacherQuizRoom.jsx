@@ -227,12 +227,33 @@ export default function TeacherQuizRoom() {
     );
     cleanupFunctions.push(getList);
     cleanupFunctions.push(offEnded);
-
+    const offRejoin = on(
+      "rejoin-success",
+      ({ studentList, leaderboard, currentQuestionDetails }) => {
+        setCurQues({
+          questionIndex: currentQuestionDetails?.questionIndex,
+          question: currentQuestionDetails?.question,
+          options: currentQuestionDetails?.options,
+          timeLimit: currentQuestionDetails?.timeLeft,
+          totalQuestions: currentQuestionDetails?.totalQuestions,
+          questionNumber: currentQuestionDetails?.questionNumber,
+          correctAnswer: null,
+        });
+        if(currentQuestionDetails)setLeaderboard(leaderboard || []);
+        setStudents(studentList || []);
+        if (currentQuestionDetails) {
+          setPhase("question");
+        }
+        console.log("Current question details on rejoin:", currentQuestionDetails);
+        setTimeLeft(currentQuestionDetails?.timeLeft || 30);
+      },
+    );
+    cleanupFunctions.push(offRejoin);
     return () => cleanupFunctions.forEach((cleanup) => cleanup?.());
   }, [on]);
 
   useEffect(() => {
-    rejoinAsTeacher(roomId, user?.user?.name);
+    rejoinAsTeacher(roomId);
   }, []);
 
   const handleStart = () => startQuiz(roomId);

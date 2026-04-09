@@ -62,8 +62,8 @@ export function useSocket() {
     socket?.emit("close-room", { roomId });
   }, []);
 
-  const rejoinAsTeacher = useCallback((roomId, teacherName) => {
-    socket?.emit("rejoin-as-teacher", { roomId, teacherName });
+  const rejoinAsTeacher = useCallback((roomId) => {
+    socket?.emit("rejoin-as-teacher", { roomId });
   }, []);
 
   const rejoinAsStudent = useCallback((roomId) => {
