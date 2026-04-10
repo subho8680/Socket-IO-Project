@@ -1,31 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Form, Input, Button, Slider, Select, message, Spin } from "antd";
+import { message } from "antd";
 import {
-  ArrowLeftOutlined,
-  ThunderboltOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  RobotOutlined,
-  CheckOutlined,
-  ClockCircleOutlined,
-  ReloadOutlined,
-  TrophyOutlined,
-  BookOutlined,
-  FireOutlined,
-} from "@ant-design/icons";
+  BookOpen,
+  Settings,
+  Wand2,
+  CheckCircle2,
+  Clock,
+  BarChart3,
+  Trash2,
+  RotateCw,
+  Rocket,
+  ChevronRight,
+  ChevronLeft,
+  AlertCircle,
+  TrendingUp,
+  Users,
+  Target,
+  Zap,
+  Check,
+  X,
+} from "lucide-react";
 import DashboardLayout from "../../components/common/DashboardLayout";
-import { OPTION_LABELS, OPTION_COLORS } from "../../data/mockData";
+import { OPTION_LABELS } from "../../data/mockData";
 import { createQuiz } from "../../ApiCall";
 import { useSocket } from "../../Services/Usesocket";
 import { useAuth } from "../../context/AuthContext";
-
 const DIFFICULTIES = ["Easy", "Medium", "Hard", "Mixed"];
+const QUESTION_COUNTS = [5, 10, 15, 20];
 
-function getCorrectIndex(correctOption) {
-  return parseInt(correctOption?.quesionNo ?? "1", 10) - 1;
+function getCorrectIndex(c) {
+  return parseInt(c?.quesionNo ?? "1", 10) - 1;
 }
-
 function normaliseQuestion(apiQ, timePerQ = 30) {
   return {
     id: apiQ._id,
@@ -40,210 +46,456 @@ function normaliseQuestion(apiQ, timePerQ = 30) {
 
 function StepIndicator({ step }) {
   const steps = [
-    { title: "Room Details", icon: <EditOutlined /> },
-    { title: "Generate Questions", icon: <RobotOutlined /> },
-    { title: "Review & Launch", icon: <FireOutlined /> },
+    { label: "Quiz Configuration", icon: Settings },
+    { label: "Question Generation", icon: Wand2 },
+    { label: "Review & Publish", icon: CheckCircle2 },
   ];
+  const pct = (step / 2) * 100;
 
   return (
-    <div className="flex items-center justify-between mb-10 px-2">
-      {steps.map((s, i) => (
-        <React.Fragment key={i}>
-          <div className="flex flex-col items-center">
-            <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${
-                i < step
-                  ? "bg-emerald-500 text-white"
-                  : i === step
-                    ? "bg-gradient-to-br from-indigo-500 to-violet-600 text-white ring-4 ring-indigo-500/30"
-                    : "bg-zinc-800 text-zinc-400"
-              }`}
-            >
-              {i < step ? <CheckOutlined className="text-lg" /> : s.icon}
-            </div>
-            <p
-              className={`mt-2 text-sm font-medium transition-colors ${
-                i === step ? "text-white" : "text-zinc-400"
-              }`}
-            >
-              {s.title}
-            </p>
-          </div>
-
-          {i < steps.length - 1 && (
-            <div className="flex-1 h-px bg-zinc-800 mx-6 mt-5" />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-
-function QuestionCard({ q, index, onDelete }) {
-  return (
-    <div className="group bg-zinc-900/70 border border-zinc-800 rounded-3xl p-6 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4 flex-1">
-          <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-            {index + 1}
-          </div>
-
-          <div>
-            <p className="text-base text-white leading-relaxed font-medium">
-              {q.question}
-            </p>
-          </div>
+    <div className="mb-14">
+      <div className="relative flex items-center justify-between">
+        <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-200">
+          <div
+            className="h-full bg-blue-600 transition-all duration-500 ease-in-out"
+            style={{ width: `${pct}%` }}
+          />
         </div>
 
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => onDelete(index)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
-        />
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {q.options.map((opt, oi) => {
-          const isCorrect = oi === q.correct;
-          const color = OPTION_COLORS[oi] || "#6366f1";
-
+        {steps.map((s, i) => {
+          const done = i < step;
+          const active = i === step;
+          const Icon = s.icon;
           return (
-            <div
-              key={oi}
-              className={`flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all ${
-                isCorrect
-                  ? "border-emerald-500 bg-emerald-500/10"
-                  : "border-zinc-800 hover:border-zinc-700"
-              }`}
-            >
+            <div key={i} className="relative flex flex-col items-center flex-1">
               <div
-                className="w-7 h-7 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
-                style={{
-                  backgroundColor: `${color}20`,
-                  color: color,
-                }}
+                className={`w-12 h-12 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
+                  done
+                    ? "bg-green-600 text-white"
+                    : active
+                      ? "bg-blue-600 text-white"
+                      : "bg-white border-2 border-slate-200 text-slate-400"
+                }`}
+                style={
+                  active ? { boxShadow: "0 0 0 4px rgba(37,99,235,0.18)" } : {}
+                }
               >
-                {OPTION_LABELS[oi] || String.fromCharCode(65 + oi)}
+                {done ? <CheckCircle2 size={22} /> : <Icon size={20} />}
               </div>
-              <span className="text-zinc-300 text-sm leading-relaxed flex-1">
-                {opt}
-              </span>
-              {isCorrect && (
-                <CheckOutlined className="text-emerald-500 text-xl" />
-              )}
+              <p
+                className={`mt-3 text-sm font-semibold text-center transition-colors ${
+                  active ? "text-slate-900" : "text-slate-400"
+                }`}
+              >
+                {s.label}
+              </p>
             </div>
           );
         })}
       </div>
-
-      <div className="flex items-center gap-6 mt-6 text-sm text-zinc-400">
-        <div className="flex items-center gap-2">
-          <ClockCircleOutlined />
-          <span>{q.timeLimit}s</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <TrophyOutlined />
-          <span>{q.points} pts</span>
-        </div>
-        {q.answer && (
-          <div className="flex items-center gap-2 text-emerald-400 font-medium">
-            <CheckOutlined />
-            {q.answer}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
 
-function EmptyQuestions() {
+function Page({ children, dir = 1 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.opacity = "0";
+    el.style.transform = `translateX(${dir * 24}px)`;
+    requestAnimationFrame(() => {
+      el.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+      el.style.opacity = "1";
+      el.style.transform = "translateX(0)";
+    });
+  }, []);
+  return <div ref={ref}>{children}</div>;
+}
+
+function Card({ children, className = "", style = {} }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-zinc-800 rounded-3xl bg-zinc-950/50">
-      <div className="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center mb-5">
-        <BookOutlined style={{ fontSize: 32, color: "#4b5563" }} />
-      </div>
-      <h3 className="text-lg font-semibold text-zinc-300 mb-1">
-        No questions yet
-      </h3>
-      <p className="text-zinc-500 text-sm max-w-xs">
-        Generate high-quality questions using AI
-      </p>
+    <div
+      className={`bg-white border border-slate-200 rounded-2xl ${className}`}
+      style={style}
+    >
+      {children}
     </div>
+  );
+}
+
+function PillBtn({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`h-11 px-4 rounded-xl font-semibold text-sm transition-all duration-150 border-2 ${
+        active
+          ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/20"
+          : "bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function TextInput({ placeholder, value, onChange, error }) {
+  return (
+    <div>
+      <input
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`w-full h-11 px-4 rounded-xl border text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all duration-150 ${
+          error
+            ? "border-red-400 ring-2 ring-red-100 bg-red-50"
+            : "border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white"
+        }`}
+      />
+      {error && (
+        <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1 font-medium">
+          <AlertCircle size={12} /> {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function TimeSlider({ value, onChange }) {
+  return (
+    <div>
+      <input
+        type="range"
+        min={10}
+        max={60}
+        step={5}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-2 rounded-full appearance-none cursor-pointer"
+        style={{
+          background: `linear-gradient(to right, #2563eb ${((value - 10) / 50) * 100}%, #e2e8f0 ${((value - 10) / 50) * 100}%)`,
+        }}
+      />
+      <div className="flex justify-between text-xs text-slate-400 mt-1.5 font-medium">
+        <span>10s (Fast)</span>
+        <span>30s (Standard)</span>
+        <span>60s (Extended)</span>
+      </div>
+      <style>{`
+        input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 18px; height: 18px;
+          border-radius: 50%;
+          background: #2563eb;
+          border: 2px solid white;
+          box-shadow: 0 1px 4px rgba(37,99,235,0.4);
+          cursor: pointer;
+        }
+        input[type=range]::-moz-range-thumb {
+          width: 18px; height: 18px;
+          border-radius: 50%;
+          background: #2563eb;
+          border: 2px solid white;
+          cursor: pointer;
+        }
+      `}</style>
+    </div>
+  );
+}
+const OPT_PAL = [
+  { idle: "bg-white border-slate-200", label: "bg-slate-100 text-slate-600" },
+  { idle: "bg-white border-slate-200", label: "bg-slate-100 text-slate-600" },
+  { idle: "bg-white border-slate-200", label: "bg-slate-100 text-slate-600" },
+  { idle: "bg-white border-slate-200", label: "bg-slate-100 text-slate-600" },
+];
+
+function QuestionCard({ q, index, onDelete, animate, delay = 0 }) {
+  const [show, setShow] = useState(!animate);
+  const [hover, setHover] = useState(false);
+
+  useEffect(() => {
+    if (!animate) return;
+    const t = setTimeout(() => setShow(true), delay);
+    return () => clearTimeout(t);
+  }, [animate, delay]);
+
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className={`transition-all duration-300 ${
+        animate
+          ? show
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-3"
+          : ""
+      }`}
+    >
+      <Card
+        className={`p-6 transition-all duration-200 ${
+          hover ? "border-blue-300 shadow-md" : ""
+        }`}
+        style={hover ? { boxShadow: "0 4px 20px rgba(37,99,235,0.08)" } : {}}
+      >
+        <div className="flex gap-5">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100">
+              <span className="font-bold text-blue-700 text-sm">
+                {index + 1}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-slate-900 mb-4 leading-snug">
+              {q.question}
+            </h4>
+
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              {q.options.map((opt, oi) => {
+                const correct = oi === q.correct;
+                return (
+                  <div
+                    key={oi}
+                    className={`p-3 rounded-xl border-2 transition-colors ${
+                      correct
+                        ? "border-green-400 bg-green-50"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm ${
+                          correct
+                            ? "bg-green-600 text-white"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {OPTION_LABELS[oi] || String.fromCharCode(65 + oi)}
+                      </div>
+                      <span className="text-sm text-slate-700 flex-1 leading-snug">
+                        {opt}
+                      </span>
+                      {correct && (
+                        <CheckCircle2
+                          size={16}
+                          className="text-green-600 flex-shrink-0"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-5 text-sm text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <Clock size={13} /> {q.timeLimit}s
+              </span>
+              <span className="flex items-center gap-1.5">
+                <BarChart3 size={13} /> {q.points} pts
+              </span>
+              {q.answer && (
+                <span className="flex items-center gap-1.5 text-green-600 font-medium ml-auto">
+                  <Check size={13} /> {q.answer}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Delete */}
+          <div className="flex-shrink-0">
+            <button
+              onClick={() => onDelete(index)}
+              className={`p-2 rounded-xl transition-all duration-150 ${
+                hover
+                  ? "opacity-100 bg-red-50 text-red-500 hover:bg-red-100"
+                  : "opacity-0"
+              }`}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function FeatureCard({ icon: Icon, title, desc, color }) {
+  const colors = {
+    blue: {
+      wrap: "from-blue-50 to-blue-100/40 border-blue-200",
+      icon: "bg-blue-600",
+    },
+    green: {
+      wrap: "from-green-50 to-green-100/40 border-green-200",
+      icon: "bg-green-600",
+    },
+    purple: {
+      wrap: "from-purple-50 to-purple-100/40 border-purple-200",
+      icon: "bg-purple-600",
+    },
+  };
+  const c = colors[color];
+  return (
+    <Card className={`p-6 bg-gradient-to-br ${c.wrap}`}>
+      <div className="flex items-start gap-4">
+        <div
+          className={`w-12 h-12 ${c.icon} rounded-xl flex items-center justify-center flex-shrink-0`}
+        >
+          <Icon size={22} className="text-white" />
+        </div>
+        <div>
+          <h3 className="font-bold text-slate-900 mb-1">{title}</h3>
+          <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function StatTile({ label, value, icon: Icon }) {
+  return (
+    <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon size={14} className="text-slate-400" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+          {label}
+        </span>
+      </div>
+      <p className="font-bold text-slate-900 text-lg leading-tight">{value}</p>
+    </div>
+  );
+}
+
+function Btn({
+  children,
+  onClick,
+  loading,
+  disabled,
+  variant = "primary",
+  size = "md",
+}) {
+  const [press, setPress] = useState(false);
+  const base =
+    "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-150 select-none";
+  const sizes = { md: "h-10 px-5 text-sm", lg: "h-12 px-8 text-sm" };
+  const variants = {
+    primary:
+      "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/20",
+    outline:
+      "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300",
+    white: "bg-white text-blue-700 hover:bg-blue-50 shadow-sm",
+  };
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      onMouseDown={() => setPress(true)}
+      onMouseUp={() => setPress(false)}
+      onMouseLeave={() => setPress(false)}
+      className={`${base} ${sizes[size]} ${variants[variant]} ${
+        disabled || loading ? "opacity-50 cursor-not-allowed" : ""
+      }`}
+      style={{ transform: press && !disabled ? "scale(0.97)" : "scale(1)" }}
+    >
+      {loading ? (
+        <svg
+          className="animate-spin"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeOpacity=".25"
+            strokeWidth="3"
+          />
+          <path
+            d="M12 2a10 10 0 0 1 10 10"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        </svg>
+      ) : null}
+      {children}
+    </button>
   );
 }
 
 export default function CreateRoom() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [form] = Form.useForm();
+  const [dir, setDir] = useState(1);
   const { user } = useAuth();
-  const [roomData, setRoomData] = useState({});
+  const [roomData, setRoomData] = useState({
+    title: "",
+    topic: "",
+    difficulty: "Medium",
+    numQuestions: 5,
+    timePerQ: 30,
+  });
   const [questions, setQuestions] = useState([]);
-  const [quizMeta, setQuizMeta] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [genError, setGenError] = useState("");
+  const [errors, setErrors] = useState({});
   const { createRoom, on } = useSocket();
 
   useEffect(() => {
-    const roomSuccess = on("room-created", ({ roomId }) => {
-      message.success("Room created successfully! 🎉");
-      setTimeout(() => {
-        navigate(`/teacher/room/${roomId}`);
-      }, 800);
+    const off = on("room-created", ({ roomId }) => {
+      message.success("Room launched!");
+      setTimeout(() => navigate(`/teacher/room/${roomId}`), 700);
     });
-    return () => roomSuccess();
+    return () => off();
   }, [on, navigate]);
 
-  const handleRoomDetails = async () => {
-    try {
-      const vals = await form.validateFields();
-      setRoomData(vals);
-      setStep(1);
-    } catch (e) {}
+  const goTo = (n) => {
+    setDir(n > step ? 1 : -1);
+    setStep(n);
+  };
+
+  const validateStep0 = () => {
+    const e = {};
+    if (!roomData.title.trim()) e.title = "Quiz title is required";
+    if (!roomData.topic.trim()) e.topic = "Topic is required";
+    setErrors(e);
+    return !Object.keys(e).length;
+  };
+
+  const handleNext = () => {
+    if (step === 0 && !validateStep0()) return;
+    goTo(step + 1);
   };
 
   const handleGenerate = async () => {
     setGenerating(true);
     setGenError("");
-
     try {
-      const payload = {
+      const res = await createQuiz({
         topic: roomData.topic,
-        quesNo: String(roomData.numQuestions || 5),
+        quesNo: String(roomData.numQuestions),
         description: roomData.title || roomData.topic,
-      };
-
-      const response = await createQuiz(payload);
-      if (!response?.success || !response?.quiz) {
-        throw new Error(response?.msg || "Failed to generate questions");
-      }
-
-      const { quiz } = response;
-
-      setQuizMeta({
-        _id: quiz._id,
-        name: quiz.name,
-        createdBy: quiz.createdBy,
       });
-
-      const timePerQ = roomData.timePerQ || 30;
-      const normalised = (quiz.questions || []).map((q) =>
-        normaliseQuestion(q, timePerQ),
+      if (!res?.success || !res?.quiz)
+        throw new Error(res?.msg || "Generation failed");
+      const qs = (res.quiz.questions || []).map((q) =>
+        normaliseQuestion(q, roomData.timePerQ),
       );
-
-      if (normalised.length === 0) {
-        throw new Error("No questions were generated. Please try again.");
-      }
-
-      setQuestions(normalised);
-      message.success(`${normalised.length} questions generated successfully!`);
+      if (!qs.length)
+        throw new Error("No questions returned. Please try again.");
+      setQuestions(qs);
+      message.success(`${qs.length} questions generated!`);
     } catch (err) {
-      const errMsg = err?.message || "Failed to generate questions";
-      setGenError(errMsg);
-      message.error(errMsg);
+      const m = err?.message || "Failed to generate questions";
+      setGenError(m);
+      message.error(m);
     } finally {
       setGenerating(false);
     }
@@ -251,26 +503,21 @@ export default function CreateRoom() {
 
   const handleRegenerate = () => {
     setQuestions([]);
-    setQuizMeta(null);
     setGenError("");
   };
-
-  const handleDeleteQ = (idx) => {
-    setQuestions((prev) => prev.filter((_, i) => i !== idx));
-    message.info("Question removed");
-  };
+  const handleDeleteQ = (idx) =>
+    setQuestions((p) => p.filter((_, i) => i !== idx));
 
   const handleLaunch = async () => {
-    if (questions.length === 0) {
-      message.warning("Please add at least one question");
+    if (!questions.length) {
+      message.warning("Add at least one question");
       return;
     }
-
     setLaunching(true);
     try {
-      createRoom(user.user.name, questions,user.user._id);
-    } catch (err) {
-      message.error("Failed to launch room");
+      createRoom(user.user.name, questions, user.user._id);
+    } catch {
+      message.error("Failed to launch");
     } finally {
       setLaunching(false);
     }
@@ -278,309 +525,363 @@ export default function CreateRoom() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-zinc-950 text-white">
-        <div className="max-w-5xl mx-auto px-6 py-10">
-          <div className="flex items-center gap-4 mb-10">
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={() =>
-                step > 0 ? setStep(step - 1) : navigate("/teacher/dashboard")
-              }
-              className="text-zinc-400 hover:text-white"
-            >
-              {step > 0 ? "Back" : "Dashboard"}
-            </Button>
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight">
-                Create Quiz Room
-              </h1>
-              <p className="text-zinc-400 mt-1">
-                Design, generate, and launch engaging quizzes
-              </p>
-            </div>
-          </div>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 0.9s linear infinite; }
+      `}</style>
 
+      <div className="min-h-screen bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6 py-12">
           <StepIndicator step={step} />
 
           {step === 0 && (
-            <div className="bg-zinc-900 rounded-3xl p-8 border border-zinc-800">
-              <Form
-                form={form}
-                layout="vertical"
-                initialValues={{
-                  numQuestions: 5,
-                  timePerQ: 30,
-                  difficulty: "Medium",
-                }}
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Form.Item
-                    label="Room Title"
-                    name="title"
-                    rules={[
-                      { required: true, message: "Please enter a room title" },
-                    ]}
-                  >
-                    <Input
-                      size="large"
-                      placeholder="e.g. React Advanced Concepts"
-                      className="bg-zinc-950 border-zinc-700 rounded-2xl py-3 text-base"
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    label="Topic / Subject"
-                    name="topic"
-                    rules={[{ required: true, message: "Topic is required" }]}
-                  >
-                    <Input
-                      size="large"
-                      placeholder="e.g. useEffect, Custom Hooks & Performance"
-                      className="bg-zinc-950 border-zinc-700 rounded-2xl py-3 text-base"
-                    />
-                  </Form.Item>
+            <Page dir={dir} key="step0">
+              <div className="max-w-4xl mx-auto">
+                <div className="mb-10">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+                    Configure Your Quiz
+                  </h2>
+                  <p className="text-slate-500 text-base">
+                    Set up the basic parameters for your quiz session
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                  <Form.Item label="Difficulty" name="difficulty">
-                    <Select size="large" className="rounded-2xl">
-                      {DIFFICULTIES.map((d) => (
-                        <Select.Option key={d} value={d}>
-                          {d}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
+                <div className="grid grid-cols-3 gap-5 mb-10">
+                  <FeatureCard
+                    icon={Target}
+                    title="Focused Learning"
+                    desc="AI-powered questions tailored to your topic"
+                    color="blue"
+                  />
+                  <FeatureCard
+                    icon={TrendingUp}
+                    title="Adaptive Difficulty"
+                    desc="Choose challenge level that fits your audience"
+                    color="green"
+                  />
+                  <FeatureCard
+                    icon={Users}
+                    title="Live Engagement"
+                    desc="Real-time quiz sessions with instant feedback"
+                    color="purple"
+                  />
+                </div>
 
-                  <Form.Item label="Number of Questions" name="numQuestions">
-                    <Select size="large" className="rounded-2xl">
-                      {[5, 10, 15, 20].map((n) => (
-                        <Select.Option key={n} value={n}>
-                          {n} Questions
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item
-                    label={
-                      <div className="flex justify-between w-full text-sm">
-                        <span>Time per Question</span>
-                        <span className="font-mono text-indigo-400">
-                          {form.getFieldValue("timePerQ") || 30}s
-                        </span>
+                <Card className="p-8">
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Quiz Title <span className="text-red-500">*</span>
+                        </label>
+                        <TextInput
+                          placeholder="Enter quiz title"
+                          value={roomData.title}
+                          onChange={(e) => {
+                            setRoomData({ ...roomData, title: e.target.value });
+                            if (errors.title)
+                              setErrors({ ...errors, title: "" });
+                          }}
+                          error={errors.title}
+                        />
                       </div>
-                    }
-                    name="timePerQ"
-                  >
-                    <Slider
-                      min={10}
-                      max={60}
-                      step={5}
-                      marks={{ 10: "10s", 30: "30s", 60: "60s" }}
-                      className="pt-4"
-                    />
-                  </Form.Item>
-                </div>
-              </Form>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                          Topic / Subject{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <TextInput
+                          placeholder="e.g. JavaScript Fundamentals"
+                          value={roomData.topic}
+                          onChange={(e) => {
+                            setRoomData({ ...roomData, topic: e.target.value });
+                            if (errors.topic)
+                              setErrors({ ...errors, topic: "" });
+                          }}
+                          error={errors.topic}
+                        />
+                      </div>
+                    </div>
 
-              <Button
-                type="primary"
-                size="large"
-                block
-                onClick={handleRoomDetails}
-                className="mt-10 h-12 text-base font-semibold rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500"
-              >
-                Continue to AI Generation →
-              </Button>
-            </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Difficulty Level
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {DIFFICULTIES.map((d) => (
+                          <PillBtn
+                            key={d}
+                            label={d}
+                            active={roomData.difficulty === d}
+                            onClick={() =>
+                              setRoomData({ ...roomData, difficulty: d })
+                            }
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-3">
+                          Number of Questions
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {QUESTION_COUNTS.map((n) => (
+                            <PillBtn
+                              key={n}
+                              label={n}
+                              active={roomData.numQuestions === n}
+                              onClick={() =>
+                                setRoomData({ ...roomData, numQuestions: n })
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                          <label className="text-sm font-semibold text-slate-700">
+                            Time per Question
+                          </label>
+                          <div className="bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg">
+                            <span className="text-base font-bold text-blue-700 tabular-nums">
+                              {roomData.timePerQ}s
+                            </span>
+                          </div>
+                        </div>
+                        <TimeSlider
+                          value={roomData.timePerQ}
+                          onChange={(v) =>
+                            setRoomData({ ...roomData, timePerQ: v })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-10 flex justify-end">
+                    <Btn size="lg" onClick={handleNext}>
+                      Continue to Generation <ChevronRight size={18} />
+                    </Btn>
+                  </div>
+                </Card>
+              </div>
+            </Page>
           )}
 
           {step === 1 && (
-            <div className="space-y-8">
-              <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 rounded-3xl p-10 text-center">
-                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-indigo-500/10 to-violet-500/10 rounded-3xl flex items-center justify-center border border-indigo-500/20 mb-6">
-                  <RobotOutlined style={{ fontSize: 40, color: "#a5b4fc" }} />
+            <Page dir={dir} key="step1">
+              <div className="max-w-5xl mx-auto">
+                <div className="mb-10">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+                    AI Question Generation
+                  </h2>
+                  <p className="text-slate-500 text-base">
+                    Generate high-quality questions powered by AI
+                  </p>
                 </div>
 
-                <h2 className="text-2xl font-semibold mb-2">
-                  AI Question Generator
-                </h2>
-                <p className="text-zinc-400">
-                  Generating{" "}
-                  <span className="text-indigo-400 font-medium">
-                    {roomData.numQuestions || 5}
-                  </span>{" "}
-                  questions on
-                </p>
-                <p className="text-lg font-medium text-white mt-1">
-                  "{roomData.topic}"
-                </p>
-
-                {generating ? (
-                  <div className="mt-10">
-                    <Spin size="large" />
-                    <p className="mt-5 text-zinc-400 text-sm">
-                      Crafting intelligent questions with AI...
-                    </p>
-                  </div>
-                ) : genError ? (
-                  <div className="mt-8">
-                    <div className="bg-red-950/50 border border-red-500/30 text-red-400 p-5 rounded-2xl mb-6 text-sm">
-                      {genError}
+                <Card className="p-8 mb-8">
+                  <div className="flex items-center justify-between gap-8">
+                    <div className="flex items-start gap-5">
+                      <div
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
+                        }}
+                      >
+                        <Wand2 size={28} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">
+                          Generate {roomData.numQuestions} Questions
+                        </h3>
+                        <div className="space-y-0.5">
+                          <p className="text-sm text-slate-500">
+                            <span className="font-semibold text-slate-700">
+                              Topic:{" "}
+                            </span>
+                            {roomData.topic}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            <span className="font-semibold text-slate-700">
+                              Difficulty:{" "}
+                            </span>
+                            {roomData.difficulty}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            <span className="font-semibold text-slate-700">
+                              Time:{" "}
+                            </span>
+                            {roomData.timePerQ}s per question
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <Button
-                      size="large"
-                      onClick={handleGenerate}
-                      icon={<ReloadOutlined />}
-                      className="bg-red-600 hover:bg-red-500 h-11 px-8 rounded-2xl"
-                    >
-                      Try Again
-                    </Button>
+
+                    <div className="flex-shrink-0">
+                      {genError && (
+                        <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 max-w-xs">
+                          <AlertCircle size={14} className="flex-shrink-0" />
+                          {genError}
+                        </div>
+                      )}
+
+                      {questions.length === 0 ? (
+                        <Btn
+                          size="lg"
+                          loading={generating}
+                          onClick={handleGenerate}
+                        >
+                          {!generating && <Wand2 size={18} />}
+                          {generating ? "Generating…" : "Generate Questions"}
+                        </Btn>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-2 text-green-600 font-semibold text-sm">
+                            <CheckCircle2 size={18} /> Generated
+                          </span>
+                          <Btn variant="outline" onClick={handleRegenerate}>
+                            <RotateCw size={14} /> Regenerate
+                          </Btn>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : questions.length === 0 ? (
-                  <Button
-                    size="large"
-                    onClick={handleGenerate}
-                    icon={<ThunderboltOutlined />}
-                    className="mt-8 h-12 px-10 text-base font-semibold rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600"
-                  >
-                    Generate Questions with AI
-                  </Button>
-                ) : (
-                  <div className="mt-8 flex items-center justify-center gap-3 text-emerald-400 text-base font-medium">
-                    <CheckOutlined className="text-xl" />
-                    Questions Generated Successfully
+                </Card>
+
+                {questions.length > 0 && (
+                  <div>
+                    <div className="flex justify-between items-center mb-5">
+                      <h3 className="text-lg font-bold text-slate-900">
+                        Questions ({questions.length})
+                      </h3>
+                    </div>
+
+                    <div className="space-y-4 mb-8">
+                      {questions.map((q, i) => (
+                        <QuestionCard
+                          key={q.id}
+                          q={q}
+                          index={i}
+                          onDelete={handleDeleteQ}
+                          animate
+                          delay={i * 55}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Btn size="lg" onClick={handleNext}>
+                        Continue to Review <ChevronRight size={18} />
+                      </Btn>
+                    </div>
                   </div>
                 )}
               </div>
-
-              {questions.length > 0 && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-semibold">
-                      Generated Questions ({questions.length})
-                    </h3>
-                    <Button
-                      onClick={handleRegenerate}
-                      icon={<ReloadOutlined />}
-                      className="text-zinc-400 hover:text-white text-sm"
-                    >
-                      Regenerate All
-                    </Button>
-                  </div>
-
-                  <div className="space-y-5">
-                    {questions.map((q, i) => (
-                      <QuestionCard
-                        key={q.id}
-                        q={q}
-                        index={i}
-                        onDelete={handleDeleteQ}
-                      />
-                    ))}
-                  </div>
-
-                  <Button
-                    type="primary"
-                    size="large"
-                    block
-                    onClick={() => setStep(2)}
-                    className="h-12 text-base font-semibold rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600"
-                  >
-                    Review & Launch Room →
-                  </Button>
-                </>
-              )}
-
-              {!generating && questions.length === 0 && !genError && (
-                <EmptyQuestions />
-              )}
-            </div>
+            </Page>
           )}
 
           {step === 2 && (
-            <div className="space-y-8">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
-                <h3 className="text-xl font-semibold flex items-center gap-3 mb-6">
-                  <FireOutlined className="text-orange-500" /> Room Summary
-                </h3>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-                  {[
-                    { label: "Room Title", value: roomData.title },
-                    { label: "Topic", value: roomData.topic },
-                    {
-                      label: "Questions",
-                      value: `${questions.length} questions`,
-                    },
-                    {
-                      label: "Time per Question",
-                      value: `${roomData.timePerQ || 30}s`,
-                    },
-                    {
-                      label: "Difficulty",
-                      value: roomData.difficulty || "Medium",
-                    },
-                    {
-                      label: "Estimated Duration",
-                      value: `~${Math.ceil((questions.length * (roomData.timePerQ || 30)) / 60)} min`,
-                    },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5"
-                    >
-                      <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">
-                        {item.label}
-                      </p>
-                      <p className="text-base font-medium text-white">
-                        {item.value}
-                      </p>
-                    </div>
-                  ))}
+            <Page dir={dir} key="step2">
+              <div className="max-w-5xl mx-auto">
+                <div className="mb-10">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+                    Review & Publish
+                  </h2>
+                  <p className="text-slate-500 text-base">
+                    Review your quiz configuration before publishing
+                  </p>
                 </div>
-              </div>
 
-              {questions.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-5">
-                    Final Questions
+                <Card className="p-8 mb-8">
+                  <h3 className="text-base font-bold text-slate-900 mb-5">
+                    Quiz Overview
                   </h3>
-                  <div className="space-y-5">
-                    {questions.map((q, i) => (
-                      <QuestionCard
-                        key={q.id}
-                        q={q}
-                        index={i}
-                        onDelete={handleDeleteQ}
-                      />
-                    ))}
+                  <div className="grid grid-cols-4 gap-4">
+                    <StatTile
+                      label="Quiz Title"
+                      value={roomData.title}
+                      icon={BookOpen}
+                    />
+                    <StatTile
+                      label="Topic"
+                      value={roomData.topic}
+                      icon={Target}
+                    />
+                    <StatTile
+                      label="Total Questions"
+                      value={`${questions.length} questions`}
+                      icon={BarChart3}
+                    />
+                    <StatTile
+                      label="Est. Duration"
+                      value={`${Math.ceil((questions.length * roomData.timePerQ) / 60)} min`}
+                      icon={Clock}
+                    />
                   </div>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <StatTile
+                      label="Difficulty Level"
+                      value={roomData.difficulty}
+                      icon={Settings}
+                    />
+                    <StatTile
+                      label="Time per Question"
+                      value={`${roomData.timePerQ} seconds`}
+                      icon={Clock}
+                    />
+                  </div>
+                </Card>
+
+                {questions.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-base font-bold text-slate-900 mb-4">
+                      Question List
+                    </h3>
+                    <div className="space-y-4">
+                      {questions.map((q, i) => (
+                        <QuestionCard
+                          key={q.id}
+                          q={q}
+                          index={i}
+                          onDelete={handleDeleteQ}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  className="rounded-2xl p-6 flex items-center justify-between"
+                  style={{
+                    background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
+                  }}
+                >
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">
+                      Ready to Publish
+                    </h3>
+                    <p className="text-blue-200 text-sm">
+                      Your quiz will be available for students to join via Room
+                      ID
+                    </p>
+                  </div>
+                  <Btn
+                    variant="white"
+                    size="lg"
+                    loading={launching}
+                    disabled={!questions.length}
+                    onClick={handleLaunch}
+                  >
+                    <Rocket size={18} />
+                    {launching ? "Launching…" : "Publish Quiz"}
+                  </Btn>
                 </div>
-              )}
-
-              <div className="bg-gradient-to-br from-indigo-950/50 to-transparent border border-indigo-500/20 rounded-3xl p-6 text-center">
-                <p className="text-zinc-300 text-sm">
-                  Once launched, students can join using the{" "}
-                  <span className="font-semibold text-indigo-400">Room ID</span>
-                  .
-                </p>
               </div>
-
-              <Button
-                type="primary"
-                size="large"
-                block
-                loading={launching}
-                disabled={questions.length === 0}
-                onClick={handleLaunch}
-                className="h-14 text-base font-semibold rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:brightness-110 transition-all"
-              >
-                {launching ? "Launching Room..." : "🚀 Launch Live Quiz Room"}
-              </Button>
-            </div>
+            </Page>
           )}
         </div>
       </div>

@@ -120,7 +120,6 @@ export const connectSocket = (io) => {
         // socket.emit("error", { message: "No students in room yet." });
         // return;
       }
-
       rm.startQuiz(roomId);
       console.log(`▶️  Quiz started in room ${roomId}`);
 
@@ -310,7 +309,8 @@ export const connectSocket = (io) => {
           totalQuestions: room.questions.length,
         };
       }
-
+      console.log("room details", room);
+      console.log("question details", currentQuestionDetails);
       socket.emit("rejoin-success", {
         roomId,
         status: room.status,
@@ -421,7 +421,7 @@ export const connectSocket = (io) => {
         console.log(`⚠️ Teacher disconnected from room ${roomId}`);
 
         if (room.status === "active") {
-          rm.pauseQuiz(roomId);
+          // rm.pauseQuiz(roomId);
         }
 
         io.to(roomId).emit("teacher-disconnected", {
