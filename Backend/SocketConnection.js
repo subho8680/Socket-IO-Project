@@ -434,7 +434,7 @@ export const connectSocket = (io) => {
         if (student) {
           student.socketId = null;
           console.log(`👤 ${student.name} (${studentId}) disconnected`);
-
+          
           const teacherSocket = getTeacherSocket(room);
           if (teacherSocket) {
             teacherSocket.emit("student-disconnected", {

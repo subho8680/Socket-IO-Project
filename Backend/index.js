@@ -11,7 +11,7 @@ import leaderBoardRouter from "./Routes/LeaderBoardRoute.js";
 import { connectSocket } from "./SocketConnection.js";
 const app = express();
 const corsOptions = {
-  origin: "http://localhost:5174",
+  origin: "http://localhost:5173",
   credentials: true,
 };
 app.use(cookieParser());
@@ -23,7 +23,7 @@ app.use("/api/v1/all", leaderBoardRouter);
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5174",
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
     credentials: true,
   },

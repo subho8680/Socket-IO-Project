@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Avatar, Progress } from "antd";
 import {
   PlayCircleOutlined,
   StopOutlined,
@@ -15,24 +14,23 @@ import DashboardLayout from "../../components/common/DashboardLayout";
 import { OPTION_COLORS, OPTION_LABELS } from "../../data/mockData";
 import { useSocket } from "../../Services/Usesocket";
 import { useAuth } from "../../context/AuthContext";
+
+const OPT_BG = ["bg-blue-100", "bg-emerald-100", "bg-amber-100", "bg-pink-100"];
+const OPT_TEXT = ["text-blue-800", "text-emerald-800", "text-amber-800", "text-pink-800"];
+
 function LiveBadge() {
   return (
-    <span style={styles.liveBadge}>
-      <span style={styles.liveDot} />
+    <span className="inline-flex items-center gap-1.5 border border-red-300 rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700">
+      <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
       Live
     </span>
   );
 }
 
 function PausedBadge() {
-  return <span style={styles.pausedBadge}>⏸ Paused</span>;
-}
-
-function StatusBadge({ icon, children, style = {} }) {
   return (
-    <span style={{ ...styles.badge, ...style }}>
-      {icon && <span style={{ fontSize: 12 }}>{icon}</span>}
-      {children}
+    <span className="inline-flex items-center gap-1.5 border border-amber-300 rounded-full px-3 py-1 text-xs font-medium bg-amber-50 text-amber-700">
+      ⏸ Paused
     </span>
   );
 }
@@ -46,21 +44,15 @@ function TimerRing({ timeLeft, total }) {
     timeLeft > 15 ? "#378add" : timeLeft > 8 ? "#ba7517" : "#a32d2d";
 
   return (
-    <div style={styles.timerWrap}>
+    <div className="relative w-[76px] h-[76px] flex-shrink-0">
       <svg
         width="76"
         height="76"
         viewBox="0 0 76 76"
+        className="absolute top-0 left-0"
         style={{ transform: "rotate(-90deg)" }}
       >
-        <circle
-          cx="38"
-          cy="38"
-          r={r}
-          fill="none"
-          stroke="#e5e7eb"
-          strokeWidth="7"
-        />
+        <circle cx="38" cy="38" r={r} fill="none" stroke="#e5e7eb" strokeWidth="7" />
         <circle
           cx="38"
           cy="38"
@@ -74,37 +66,42 @@ function TimerRing({ timeLeft, total }) {
           style={{ transition: "stroke-dashoffset 1s linear, stroke 0.4s" }}
         />
       </svg>
-      <div style={styles.timerInner}>
-        <span style={{ ...styles.timerNum, color }}>{timeLeft}</span>
-        <span style={styles.timerLbl}>sec</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="text-[22px] font-medium leading-none tabular-nums"
+          style={{ color }}
+        >
+          {timeLeft}
+        </span>
+        <span className="text-[10px] uppercase tracking-widest text-gray-400 mt-0.5">
+          sec
+        </span>
       </div>
     </div>
   );
 }
 
-const OPT_BG = ["#e6f1fb", "#e1f5ee", "#faeeda", "#fbeaf0"];
-const OPT_COLOR = ["#0c447c", "#085041", "#633806", "#72243e"];
-
 function OptionCard({ opt, idx, phase, correctAnswer }) {
   const isCorrect = phase === "reveal" && idx === correctAnswer;
   return (
     <div
-      style={{
-        ...styles.optionCard,
-        ...(isCorrect ? styles.optionCorrect : {}),
-      }}
+      className={`flex items-start gap-3 p-4 rounded-xl border transition-colors duration-200 ${isCorrect
+        ? "border-emerald-400 bg-emerald-50"
+        : "border-gray-200 bg-white"
+        }`}
     >
       <div
-        style={{
-          ...styles.optLabel,
-          background: OPT_BG[idx] || "#e6f1fb",
-          color: OPT_COLOR[idx] || "#0c447c",
-        }}
+        className={`w-[30px] h-[30px] rounded-lg flex items-center justify-center text-xs font-medium flex-shrink-0 ${OPT_BG[idx] || "bg-blue-100"
+          } ${OPT_TEXT[idx] || "text-blue-800"}`}
       >
         {OPTION_LABELS[idx] || String.fromCharCode(65 + idx)}
       </div>
-      <span style={styles.optText}>{opt}</span>
-      {isCorrect && <span style={styles.optCheck}>✓</span>}
+      <span className="text-[13px] text-gray-800 leading-relaxed pt-1 flex-1">
+        {opt}
+      </span>
+      {isCorrect && (
+        <span className="text-emerald-600 text-base pt-1 flex-shrink-0">✓</span>
+      )}
     </div>
   );
 }
@@ -113,28 +110,35 @@ function LbRow({ entry, index }) {
   const medals = ["🥇", "🥈", "🥉"];
   const isTop = index < 3;
   return (
-    <div style={{ ...styles.lbRow, ...(isTop ? styles.lbRowTop : {}) }}>
-      <div style={styles.lbRank}>
+    <div
+      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isTop ? "bg-amber-50 border-amber-200" : "bg-white border-gray-100"
+        }`}
+    >
+      <div className="w-6 text-center flex-shrink-0">
         {isTop ? (
-          medals[index]
+          <span>{medals[index]}</span>
         ) : (
-          <span
-            style={{ fontFamily: "monospace", fontSize: 12, color: "#888" }}
-          >
-            #{index + 1}
-          </span>
+          <span className="font-mono text-xs text-gray-400">#{index + 1}</span>
         )}
       </div>
-      <div style={styles.avatarMd}>{entry.name?.[0]?.toUpperCase() || "?"}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={styles.lbName}>{entry.name}</div>
+      <div className="w-[34px] h-[34px] rounded-full bg-blue-100 flex items-center justify-center text-[13px] font-medium text-blue-800 flex-shrink-0">
+        {entry.name?.[0]?.toUpperCase() || "?"}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-medium text-gray-800 truncate">
+          {entry.name}
+        </div>
         {entry.streak > 1 && (
-          <div style={styles.lbStreak}>🔥 {entry.streak} streak</div>
+          <div className="text-[11px] text-amber-700 mt-0.5">
+            🔥 {entry.streak} streak
+          </div>
         )}
       </div>
-      <div style={{ textAlign: "right" }}>
-        <div style={styles.lbScore}>{(entry.score || 0).toLocaleString()}</div>
-        <div style={styles.lbAcc}>
+      <div className="text-right">
+        <div className="text-[15px] font-medium text-gray-800 tabular-nums">
+          {(entry.score || 0).toLocaleString()}
+        </div>
+        <div className="text-[11px] text-gray-400 mt-0.5">
           {entry.correctAnswers || 0}/
           {(entry.correctAnswers || 0) + (entry.wrongAnswers || 0)}
         </div>
@@ -166,13 +170,13 @@ export default function TeacherQuizRoom() {
       on("student-joined", ({ studentName, studentList }) => {
         setStudents(studentList || []);
         toast.success(`${studentName} joined`);
-      }),
+      })
     );
     cleanups.push(
       on("quiz-started", () => {
         setPhase("question");
         setAnsweredCount(0);
-      }),
+      })
     );
     cleanups.push(
       on(
@@ -198,8 +202,8 @@ export default function TeacherQuizRoom() {
           setTimeLeft(timeLimit);
           setAnsweredCount(0);
           setIsPaused(false);
-        },
-      ),
+        }
+      )
     );
     cleanups.push(on("timer-tick", ({ timeLeft: t }) => setTimeLeft(t)));
     cleanups.push(
@@ -207,13 +211,13 @@ export default function TeacherQuizRoom() {
         setCurQues((prev) => ({ ...prev, correctAnswer }));
         setLeaderboard(lb || []);
         setPhase("reveal");
-      }),
+      })
     );
     cleanups.push(
       on("leaderboard-update", (data) => {
         setLeaderboard(data || []);
         setAnsweredCount((p) => p + 1);
-      }),
+      })
     );
     cleanups.push(on("quiz-paused", () => setIsPaused(true)));
     cleanups.push(on("quiz-resumed", () => setIsPaused(false)));
@@ -222,10 +226,10 @@ export default function TeacherQuizRoom() {
         setLeaderboard(lb || []);
         setQuizEnded(true);
         setPhase("ended");
-      }),
+      })
     );
     cleanups.push(
-      on("joined-list", ({ studentList }) => setStudents(studentList || [])),
+      on("joined-list", ({ studentList }) => setStudents(studentList || []))
     );
     cleanups.push(
       on(
@@ -246,8 +250,8 @@ export default function TeacherQuizRoom() {
             setTimeLeft(cq.timeLeft || 30);
           }
           setStudents(studentList || []);
-        },
-      ),
+        }
+      )
     );
 
     return () => cleanups.forEach((fn) => fn?.());
@@ -272,39 +276,33 @@ export default function TeacherQuizRoom() {
 
   return (
     <DashboardLayout>
-      <div style={styles.root}>
+      <div className="min-h-screen bg-[#f5f5f0] p-6">
         <div className="max-w-7xl mx-auto">
-          <div style={styles.topbar}>
-            <div style={styles.topbarLeft}>
-              <div style={styles.roomPill}>{roomId}</div>
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+            <div className="flex items-center flex-wrap gap-2">
+              <div className="bg-white border border-gray-200 rounded-lg px-4 py-1.5 font-mono text-[15px] font-medium text-blue-700 tracking-widest">
+                {roomId}
+              </div>
+
               {isActive && <LiveBadge />}
               {isPaused && <PausedBadge />}
-              <StatusBadge icon={<TeamOutlined />}>
-                <strong style={{ marginLeft: 2 }}>{students.length}</strong>
-                &nbsp;students
-              </StatusBadge>
-              <StatusBadge
-                icon={<WifiOutlined />}
-                style={{
-                  color: "#3b6d11",
-                  background: "#eaf3de",
-                  borderColor: "#97c459",
-                }}
-              >
-                Connected
-              </StatusBadge>
+
+              <span className="inline-flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1 text-xs bg-white text-gray-500">
+                <TeamOutlined />
+                <strong className="text-gray-700">{students.length}</strong>&nbsp;students
+              </span>
+
+              <span className="inline-flex items-center gap-1.5 border border-green-300 rounded-full px-3 py-1 text-xs bg-green-50 text-green-700">
+                <WifiOutlined /> Connected
+              </span>
             </div>
 
-            <div style={styles.topbarRight}>
+            <div className="flex gap-2 flex-wrap">
               {phase === "lobby" && (
                 <button
-                  style={{
-                    ...styles.btn,
-                    ...styles.btnGreen,
-                    ...(students.length === 0 ? styles.btnDisabled : {}),
-                  }}
                   onClick={handleStart}
                   disabled={students.length === 0}
+                  className="inline-flex items-center gap-2 border border-green-400 rounded-lg px-4 py-2 text-[13px] font-medium bg-green-50 text-green-800 hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <PlayCircleOutlined /> Start quiz
                 </button>
@@ -313,22 +311,22 @@ export default function TeacherQuizRoom() {
                 <>
                   {!isPaused ? (
                     <button
-                      style={{ ...styles.btn, ...styles.btnAmber }}
                       onClick={handlePause}
+                      className="inline-flex items-center gap-2 border border-amber-300 rounded-lg px-4 py-2 text-[13px] font-medium bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors"
                     >
                       <PauseOutlined /> Pause
                     </button>
                   ) : (
                     <button
-                      style={{ ...styles.btn, ...styles.btnGreen }}
                       onClick={handleResume}
+                      className="inline-flex items-center gap-2 border border-green-400 rounded-lg px-4 py-2 text-[13px] font-medium bg-green-50 text-green-800 hover:bg-green-100 transition-colors"
                     >
                       <CaretRightOutlined /> Resume
                     </button>
                   )}
                   <button
-                    style={{ ...styles.btn, ...styles.btnRed }}
                     onClick={handleEnd}
+                    className="inline-flex items-center gap-2 border border-red-300 rounded-lg px-4 py-2 text-[13px] font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
                   >
                     <StopOutlined /> Stop quiz
                   </button>
@@ -337,29 +335,40 @@ export default function TeacherQuizRoom() {
             </div>
           </div>
 
-          <div style={styles.grid}>
-            <div style={styles.mainCol}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+
+            <div className="flex flex-col gap-4">
+
               {phase === "lobby" && (
-                <div style={styles.card}>
-                  <div style={styles.sectionLabel}>Room code</div>
-                  <div style={styles.lobbyCode}>{roomId}</div>
-                  <div style={styles.sectionLabel}>
-                    Students joined ({students.length})
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+                    Room code
+                  </p>
+                  <div className="font-mono text-[52px] font-medium tracking-[0.25em] text-blue-700 text-center py-8 border border-dashed border-blue-300 rounded-xl bg-blue-50 mb-5">
+                    {roomId}
                   </div>
+                  <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-3">
+                    Students joined ({students.length})
+                  </p>
                   {students.length === 0 ? (
-                    <p style={styles.muted}>Waiting for students to join…</p>
+                    <p className="text-[13px] text-gray-400 py-1">
+                      Waiting for students to join…
+                    </p>
                   ) : (
-                    <div style={styles.chipWrap}>
+                    <div className="flex flex-wrap gap-2">
                       {students.slice(0, 10).map((s, i) => (
-                        <div key={i} style={styles.chip}>
-                          <div style={styles.avatarSm}>
+                        <div
+                          key={i}
+                          className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 text-[13px] text-gray-700"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-medium text-blue-800 flex-shrink-0">
                             {s.name?.[0]?.toUpperCase()}
                           </div>
                           {s.name}
                         </div>
                       ))}
                       {students.length > 10 && (
-                        <div style={styles.chip}>
+                        <div className="inline-flex items-center bg-gray-50 border border-gray-200 rounded-full px-3 py-1 text-[13px] text-gray-400">
                           +{students.length - 10} more
                         </div>
                       )}
@@ -369,39 +378,35 @@ export default function TeacherQuizRoom() {
               )}
 
               {isActive && curQues && (
-                <div style={styles.card}>
-                  <div style={styles.qMeta}>
-                    <div style={{ flex: 1 }}>
-                      <div style={styles.sectionLabel}>
-                        Question {curQues.questionNumber} /{" "}
-                        {curQues.totalQuestions}
-                      </div>
-                      <div style={styles.qText}>{curQues.question}</div>
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+                    <div className="flex-1">
+                      <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2">
+                        Question {curQues.questionNumber} / {curQues.totalQuestions}
+                      </p>
+                      <p className="text-[18px] font-medium text-gray-800 leading-relaxed">
+                        {curQues.question}
+                      </p>
                     </div>
                     {phase === "question" && !isPaused && (
-                      <TimerRing
-                        timeLeft={timeLeft}
-                        total={curQues.timeLimit}
-                      />
+                      <TimerRing timeLeft={timeLeft} total={curQues.timeLimit} />
                     )}
                   </div>
 
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={styles.progressBg}>
+                  <div className="mb-5">
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        style={{
-                          ...styles.progressFill,
-                          width: `${answeredPct}%`,
-                        }}
+                        className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                        style={{ width: `${answeredPct}%` }}
                       />
                     </div>
-                    <div style={styles.progressMeta}>
+                    <div className="flex justify-between text-[11px] text-gray-400 mt-1.5">
                       <span>{answeredCount} answered</span>
                       <span>{students.length} total</span>
                     </div>
                   </div>
 
-                  <div style={styles.optionsGrid}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     {curQues.options?.map((opt, i) => (
                       <OptionCard
                         key={i}
@@ -414,13 +419,13 @@ export default function TeacherQuizRoom() {
                   </div>
 
                   {phase === "reveal" && (
-                    <div style={styles.revealBanner}>
-                      <span>✓</span> Time's up — correct answer highlighted
-                      above
+                    <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-300 rounded-lg text-[13px] text-emerald-700">
+                      <span>✓</span> Time's up — correct answer highlighted above
                     </div>
                   )}
+
                   {isPaused && (
-                    <div style={styles.pauseBanner}>
+                    <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-300 rounded-lg text-[13px] text-amber-700">
                       ⏸ Quiz paused — resume to continue
                     </div>
                   )}
@@ -428,29 +433,19 @@ export default function TeacherQuizRoom() {
               )}
 
               {phase === "ended" && (
-                <div
-                  style={{
-                    ...styles.card,
-                    textAlign: "center",
-                    padding: "56px 24px",
-                  }}
-                >
-                  <div style={styles.trophyCircle}>
-                    <TrophyOutlined
-                      style={{ fontSize: 28, color: "#ba7517" }}
-                    />
+                <div className="bg-white border border-gray-200 rounded-xl p-6 text-center py-14">
+                  <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4">
+                    <TrophyOutlined className="text-2xl text-amber-600" />
                   </div>
-                  <div
-                    style={{ fontSize: 20, fontWeight: 500, marginBottom: 8 }}
-                  >
+                  <p className="text-[20px] font-medium text-gray-800 mb-2">
                     Quiz complete!
-                  </div>
-                  <div style={{ ...styles.muted, marginBottom: 24 }}>
+                  </p>
+                  <p className="text-[13px] text-gray-400 mb-6">
                     All questions answered. Great session!
-                  </div>
+                  </p>
                   <button
-                    style={{ ...styles.btn, ...styles.btnTeal }}
                     onClick={handleViewResults}
+                    className="inline-flex items-center gap-2 border border-teal-400 rounded-lg px-5 py-2.5 text-[13px] font-medium bg-teal-50 text-teal-800 hover:bg-teal-100 transition-colors"
                   >
                     <TrophyOutlined /> View full results
                   </button>
@@ -458,44 +453,46 @@ export default function TeacherQuizRoom() {
               )}
             </div>
 
-            <div style={styles.sideCol}>
-              <div style={{ ...styles.card, position: "sticky", top: 24 }}>
-                <div style={styles.lbHeader}>
-                  <div style={styles.lbTitle}>
+            <div className="lg:sticky lg:top-6 self-start">
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-[14px] font-medium text-gray-800">
                     <span>🏆</span> Live leaderboard
                   </div>
-                  {isActive && <span style={styles.lbLivePill}>live</span>}
+                  {isActive && (
+                    <span className="text-[11px] bg-red-50 text-red-700 border border-red-200 rounded-full px-2.5 py-0.5 font-medium">
+                      live
+                    </span>
+                  )}
                 </div>
 
-                <div style={styles.statGrid}>
-                  <div style={styles.statCard}>
-                    <div style={styles.statLabel}>Students</div>
-                    <div style={styles.statVal}>{students.length}</div>
+                <div className="grid grid-cols-2 gap-2.5 mb-4">
+                  <div className="bg-gray-50 rounded-lg px-3.5 py-3">
+                    <p className="text-[11px] uppercase tracking-widest text-gray-400 mb-1">
+                      Students
+                    </p>
+                    <p className="text-[22px] font-medium text-gray-800 tabular-nums">
+                      {students.length}
+                    </p>
                   </div>
-                  <div style={styles.statCard}>
-                    <div style={styles.statLabel}>Answered</div>
-                    <div style={styles.statVal}>{answeredPct}%</div>
+                  <div className="bg-gray-50 rounded-lg px-3.5 py-3">
+                    <p className="text-[11px] uppercase tracking-widest text-gray-400 mb-1">
+                      Answered
+                    </p>
+                    <p className="text-[22px] font-medium text-gray-800 tabular-nums">
+                      {answeredPct}%
+                    </p>
                   </div>
                 </div>
 
-                <div style={styles.lbList}>
+                <div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto">
                   {leaderboard.length === 0 ? (
-                    <div
-                      style={{
-                        ...styles.muted,
-                        textAlign: "center",
-                        padding: "32px 0",
-                      }}
-                    >
+                    <p className="text-[13px] text-gray-400 text-center py-8">
                       Leaderboard updates as students answer
-                    </div>
+                    </p>
                   ) : (
                     leaderboard.map((entry, i) => (
-                      <LbRow
-                        key={entry.socketId || i}
-                        entry={entry}
-                        index={i}
-                      />
+                      <LbRow key={entry.socketId || i} entry={entry} index={i} />
                     ))
                   )}
                 </div>
@@ -507,407 +504,3 @@ export default function TeacherQuizRoom() {
     </DashboardLayout>
   );
 }
-
-const styles = {
-  root: {
-    minHeight: "100vh",
-    background: "#f5f5f0",
-    padding: "24px",
-    fontFamily: "'DM Sans', system-ui, sans-serif",
-  },
-  topbar: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 24,
-  },
-  topbarLeft: {
-    display: "flex",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  topbarRight: { display: "flex", gap: 8, flexWrap: "wrap" },
-  roomPill: {
-    background: "#fff",
-    border: "0.5px solid #e2e2da",
-    borderRadius: 8,
-    padding: "7px 18px",
-    fontFamily: "monospace",
-    fontSize: 15,
-    fontWeight: 500,
-    color: "#185fa5",
-    letterSpacing: "0.12em",
-  },
-  badge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    border: "0.5px solid #e2e2da",
-    borderRadius: 20,
-    padding: "5px 12px",
-    fontSize: 12,
-    background: "#fff",
-    color: "#666",
-  },
-  liveBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    border: "0.5px solid #f09595",
-    borderRadius: 20,
-    padding: "5px 12px",
-    fontSize: 12,
-    background: "#fcebeb",
-    color: "#a32d2d",
-    fontWeight: 500,
-  },
-  liveDot: {
-    display: "inline-block",
-    width: 7,
-    height: 7,
-    borderRadius: "50%",
-    background: "#e24b4a",
-    animation: "none",
-  },
-  pausedBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    border: "0.5px solid #ef9f27",
-    borderRadius: 20,
-    padding: "5px 12px",
-    fontSize: 12,
-    background: "#faeeda",
-    color: "#854f0b",
-    fontWeight: 500,
-  },
-  btn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 7,
-    border: "0.5px solid #d3d1c7",
-    borderRadius: 8,
-    padding: "8px 18px",
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-    background: "#fff",
-    color: "#2c2c2a",
-    transition: "background 0.15s",
-  },
-  btnGreen: { background: "#eaf3de", borderColor: "#97c459", color: "#3b6d11" },
-  btnAmber: { background: "#faeeda", borderColor: "#ef9f27", color: "#854f0b" },
-  btnRed: { background: "#fcebeb", borderColor: "#f09595", color: "#a32d2d" },
-  btnTeal: { background: "#e1f5ee", borderColor: "#5dcaa5", color: "#0f6e56" },
-  btnDisabled: { opacity: 0.5, cursor: "not-allowed" },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 320px",
-    gap: 20,
-  },
-  mainCol: { display: "flex", flexDirection: "column", gap: 16 },
-  sideCol: {},
-  card: {
-    background: "#fff",
-    border: "0.5px solid #e2e2da",
-    borderRadius: 12,
-    padding: 24,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: 500,
-    letterSpacing: "0.08em",
-    color: "#888",
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-  muted: { fontSize: 13, color: "#888", padding: "6px 0" },
-  lobbyCode: {
-    fontFamily: "monospace",
-    fontSize: 52,
-    fontWeight: 500,
-    letterSpacing: "0.25em",
-    color: "#185fa5",
-    textAlign: "center",
-    padding: "32px 0",
-    border: "0.5px dashed #85b7eb",
-    borderRadius: 10,
-    background: "#e6f1fb",
-    marginBottom: 20,
-  },
-  chipWrap: { display: "flex", flexWrap: "wrap", gap: 8 },
-  chip: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 7,
-    background: "#f5f5f0",
-    border: "0.5px solid #e2e2da",
-    borderRadius: 20,
-    padding: "5px 12px",
-    fontSize: 13,
-    color: "#2c2c2a",
-  },
-  avatarSm: {
-    width: 20,
-    height: 20,
-    borderRadius: "50%",
-    background: "#b5d4f4",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 10,
-    fontWeight: 500,
-    color: "#0c447c",
-    flexShrink: 0,
-  },
-  avatarMd: {
-    width: 34,
-    height: 34,
-    borderRadius: "50%",
-    background: "#b5d4f4",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#0c447c",
-    flexShrink: 0,
-  },
-  qMeta: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 16,
-    marginBottom: 20,
-    flexWrap: "wrap",
-  },
-  qText: {
-    fontSize: 18,
-    fontWeight: 500,
-    color: "#2c2c2a",
-    lineHeight: 1.5,
-  },
-  timerWrap: {
-    position: "relative",
-    width: 76,
-    height: 76,
-    flexShrink: 0,
-  },
-  timerInner: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  timerNum: {
-    fontSize: 22,
-    fontWeight: 500,
-    fontVariantNumeric: "tabular-nums",
-    lineHeight: 1,
-  },
-  timerLbl: {
-    fontSize: 10,
-    letterSpacing: "0.1em",
-    color: "#888",
-    textTransform: "uppercase",
-  },
-  progressBg: {
-    height: 6,
-    background: "#f0ede6",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-    background: "#378add",
-    transition: "width 0.5s",
-  },
-  progressMeta: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 11,
-    color: "#888",
-    marginTop: 5,
-  },
-  optionsGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-  },
-  optionCard: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: "14px 16px",
-    border: "0.5px solid #e2e2da",
-    borderRadius: 10,
-    background: "#fff",
-    transition: "border-color 0.2s",
-  },
-  optionCorrect: {
-    borderColor: "#5dcaa5",
-    background: "#e1f5ee",
-  },
-  optLabel: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    fontWeight: 500,
-    flexShrink: 0,
-  },
-  optText: {
-    fontSize: 13,
-    color: "#2c2c2a",
-    lineHeight: 1.5,
-    paddingTop: 4,
-    flex: 1,
-  },
-  optCheck: {
-    fontSize: 16,
-    color: "#1d9e75",
-    flexShrink: 0,
-    paddingTop: 4,
-  },
-  revealBanner: {
-    marginTop: 16,
-    padding: "11px 16px",
-    background: "#e1f5ee",
-    border: "0.5px solid #5dcaa5",
-    borderRadius: 8,
-    fontSize: 13,
-    color: "#0f6e56",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  pauseBanner: {
-    marginTop: 16,
-    padding: "11px 16px",
-    background: "#faeeda",
-    border: "0.5px solid #ef9f27",
-    borderRadius: 8,
-    fontSize: 13,
-    color: "#854f0b",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  trophyCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: "50%",
-    background: "#faeeda",
-    border: "0.5px solid #fac775",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0 auto 16px",
-  },
-  lbHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  lbTitle: {
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#2c2c2a",
-    display: "flex",
-    alignItems: "center",
-    gap: 7,
-  },
-  lbLivePill: {
-    fontSize: 11,
-    background: "#fcebeb",
-    color: "#a32d2d",
-    border: "0.5px solid #f09595",
-    borderRadius: 12,
-    padding: "3px 10px",
-    fontWeight: 500,
-  },
-  statGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-    marginBottom: 16,
-  },
-  statCard: {
-    background: "#f5f5f0",
-    borderRadius: 8,
-    padding: "12px 14px",
-  },
-  statLabel: {
-    fontSize: 11,
-    color: "#888",
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    marginBottom: 4,
-  },
-  statVal: {
-    fontSize: 22,
-    fontWeight: 500,
-    color: "#2c2c2a",
-    fontVariantNumeric: "tabular-nums",
-  },
-  lbList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    maxHeight: 480,
-    overflowY: "auto",
-  },
-  lbRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "10px 12px",
-    borderRadius: 8,
-    border: "0.5px solid #e2e2da",
-    background: "#fff",
-  },
-  lbRowTop: {
-    background: "#faeeda",
-    borderColor: "#fac775",
-  },
-  lbRank: {
-    width: 26,
-    textAlign: "center",
-    flexShrink: 0,
-  },
-  lbName: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#2c2c2a",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  lbStreak: {
-    fontSize: 11,
-    color: "#ba7517",
-    marginTop: 1,
-  },
-  lbScore: {
-    fontSize: 15,
-    fontWeight: 500,
-    color: "#2c2c2a",
-    fontVariantNumeric: "tabular-nums",
-  },
-  lbAcc: {
-    fontSize: 11,
-    color: "#888",
-    textAlign: "right",
-    marginTop: 1,
-  },
-};
