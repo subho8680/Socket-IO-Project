@@ -1,12 +1,9 @@
 const rooms = {};
 
-function generateRoomId() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let id = "";
-  for (let i = 0; i < 6; i++) {
-    id += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return rooms[id] ? generateRoomId() : id;
+export function generateRoomId() {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${timestamp}-${random}`;
 }
 
 function getLeaderboard(roomId) {

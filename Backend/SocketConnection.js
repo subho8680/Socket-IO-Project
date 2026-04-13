@@ -133,6 +133,28 @@ export const connectSocket = (io) => {
       }, 2000);
     });
 
+    const startQuiz = (roomId) => {
+      if (!isTeacher(socket, roomId)) return;
+      console.log("nw quiz starting");
+      const room = rm.getRoom(roomId);
+      if (!room) return;
+
+      if (room.students.length === 0) {
+        // socket.emit("error", { message: "No students in room yet." });
+        // return;
+      }
+      rm.startQuiz(roomId);
+      console.log(`▶️  Quiz started in room ${roomId}`);
+
+      io.to(roomId).emit("quiz-started", {
+        totalQuestions: room.questions.length,
+        message: "Quiz is starting!",
+      });
+
+      setTimeout(() => {
+        broadcastQuestion(roomId, 0);
+      }, 2000);
+    };
     socket.on("next-question", ({ roomId }) => {
       if (!isTeacher(socket, roomId)) return;
 
@@ -434,7 +456,7 @@ export const connectSocket = (io) => {
         if (student) {
           student.socketId = null;
           console.log(`👤 ${student.name} (${studentId}) disconnected`);
-          
+
           const teacherSocket = getTeacherSocket(room);
           if (teacherSocket) {
             teacherSocket.emit("student-disconnected", {

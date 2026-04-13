@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   PlayCircleOutlined,
@@ -8,15 +8,22 @@ import {
   WifiOutlined,
   PauseOutlined,
   CaretRightOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import { toast } from "react-toastify";
 import DashboardLayout from "../../components/common/DashboardLayout";
-import { OPTION_COLORS, OPTION_LABELS } from "../../data/mockData";
+import { OPTION_LABELS } from "../../data/mockData";
 import { useSocket } from "../../Services/Usesocket";
 import { useAuth } from "../../context/AuthContext";
+import { useGetQuizRoomById } from "../../ApiCall";
 
 const OPT_BG = ["bg-blue-100", "bg-emerald-100", "bg-amber-100", "bg-pink-100"];
-const OPT_TEXT = ["text-blue-800", "text-emerald-800", "text-amber-800", "text-pink-800"];
+const OPT_TEXT = [
+  "text-blue-800",
+  "text-emerald-800",
+  "text-amber-800",
+  "text-pink-800",
+];
 
 function LiveBadge() {
   return (
@@ -31,6 +38,65 @@ function PausedBadge() {
   return (
     <span className="inline-flex items-center gap-1.5 border border-amber-300 rounded-full px-3 py-1 text-xs font-medium bg-amber-50 text-amber-700">
       ⏸ Paused
+    </span>
+  );
+}
+
+function ScheduledBadge({ scheduledAt }) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const scheduledTime = new Date(scheduledAt).getTime();
+      const now = Date.now();
+      const diffMs = scheduledTime - now;
+
+      if (diffMs <= 0) {
+        setTimeLeft("Live now ");
+        return;
+      }
+
+      const totalSeconds = Math.floor(diffMs / 1000);
+
+      const days = Math.floor(totalSeconds / (24 * 3600));
+      const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      let textParts = [];
+
+      if (days > 0) textParts.push(`${days}d`);
+      if (hours > 0 || days > 0) textParts.push(`${hours}h`);
+      if (minutes > 0 || hours > 0 || days > 0) textParts.push(`${minutes}m`);
+
+      textParts.push(`${seconds}s`);
+
+      setTimeLeft(textParts.join(" "));
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [scheduledAt]);
+
+  const isStartingSoon =
+    timeLeft.includes("s") &&
+    !timeLeft.includes("m") &&
+    !timeLeft.includes("h");
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs font-medium transition-all duration-300 ${
+        timeLeft === "Live now 🚀"
+          ? "border-green-300 bg-green-50 text-green-700"
+          : isStartingSoon
+            ? "border-amber-300 bg-amber-50 text-amber-700 animate-pulse"
+            : "border-purple-300 bg-purple-50 text-purple-700"
+      }`}
+    >
+      <ClockCircleOutlined />
+      {timeLeft === "Live now " ? timeLeft : `Starts in ~ ${timeLeft}`}
     </span>
   );
 }
@@ -52,7 +118,14 @@ function TimerRing({ timeLeft, total }) {
         className="absolute top-0 left-0"
         style={{ transform: "rotate(-90deg)" }}
       >
-        <circle cx="38" cy="38" r={r} fill="none" stroke="#e5e7eb" strokeWidth="7" />
+        <circle
+          cx="38"
+          cy="38"
+          r={r}
+          fill="none"
+          stroke="#e5e7eb"
+          strokeWidth="7"
+        />
         <circle
           cx="38"
           cy="38"
@@ -85,14 +158,16 @@ function OptionCard({ opt, idx, phase, correctAnswer }) {
   const isCorrect = phase === "reveal" && idx === correctAnswer;
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-xl border transition-colors duration-200 ${isCorrect
-        ? "border-emerald-400 bg-emerald-50"
-        : "border-gray-200 bg-white"
-        }`}
+      className={`flex items-start gap-3 p-4 rounded-xl border transition-colors duration-200 ${
+        isCorrect
+          ? "border-emerald-400 bg-emerald-50"
+          : "border-gray-200 bg-white"
+      }`}
     >
       <div
-        className={`w-[30px] h-[30px] rounded-lg flex items-center justify-center text-xs font-medium flex-shrink-0 ${OPT_BG[idx] || "bg-blue-100"
-          } ${OPT_TEXT[idx] || "text-blue-800"}`}
+        className={`w-[30px] h-[30px] rounded-lg flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+          OPT_BG[idx] || "bg-blue-100"
+        } ${OPT_TEXT[idx] || "text-blue-800"}`}
       >
         {OPTION_LABELS[idx] || String.fromCharCode(65 + idx)}
       </div>
@@ -111,8 +186,9 @@ function LbRow({ entry, index }) {
   const isTop = index < 3;
   return (
     <div
-      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isTop ? "bg-amber-50 border-amber-200" : "bg-white border-gray-100"
-        }`}
+      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${
+        isTop ? "bg-amber-50 border-amber-200" : "bg-white border-gray-100"
+      }`}
     >
       <div className="w-6 text-center flex-shrink-0">
         {isTop ? (
@@ -148,9 +224,13 @@ function LbRow({ entry, index }) {
 }
 
 export default function TeacherQuizRoom() {
-  const { roomId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const getQuizRoomById = useGetQuizRoomById(id);
+  const { data, isLoading, isError } = getQuizRoomById;
+  console.log("room details is", data);
+  const [roomId, setRoomId] = useState("");
   const [phase, setPhase] = useState("lobby");
   const [students, setStudents] = useState([]);
   const [curQues, setCurQues] = useState(null);
@@ -159,6 +239,17 @@ export default function TeacherQuizRoom() {
   const [answeredCount, setAnsweredCount] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [quizEnded, setQuizEnded] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState(null);
+  useEffect(() => {
+    if (data?.room) {
+      const status = data.room.status;
+      const time = data.room.scheduledAt;
+      const roomCode = data.room.roomCode;
+      setRoomId(roomCode);
+      setScheduledAt(time);
+      setPhase(status);
+    }
+  }, [data]);
 
   const { on, startQuiz, pauseQuiz, resumeQuiz, endQuiz, rejoinAsTeacher } =
     useSocket();
@@ -170,14 +261,16 @@ export default function TeacherQuizRoom() {
       on("student-joined", ({ studentName, studentList }) => {
         setStudents(studentList || []);
         toast.success(`${studentName} joined`);
-      })
+      }),
     );
+
     cleanups.push(
       on("quiz-started", () => {
         setPhase("question");
         setAnsweredCount(0);
-      })
+      }),
     );
+
     cleanups.push(
       on(
         "new-question",
@@ -202,39 +295,54 @@ export default function TeacherQuizRoom() {
           setTimeLeft(timeLimit);
           setAnsweredCount(0);
           setIsPaused(false);
-        }
-      )
+        },
+      ),
     );
+
     cleanups.push(on("timer-tick", ({ timeLeft: t }) => setTimeLeft(t)));
+
     cleanups.push(
       on("time-up", ({ correctAnswer, leaderboard: lb }) => {
         setCurQues((prev) => ({ ...prev, correctAnswer }));
         setLeaderboard(lb || []);
         setPhase("reveal");
-      })
+      }),
     );
+
     cleanups.push(
       on("leaderboard-update", (data) => {
         setLeaderboard(data || []);
         setAnsweredCount((p) => p + 1);
-      })
+      }),
     );
+
     cleanups.push(on("quiz-paused", () => setIsPaused(true)));
     cleanups.push(on("quiz-resumed", () => setIsPaused(false)));
+
     cleanups.push(
       on("quiz-ended", ({ leaderboard: lb }) => {
         setLeaderboard(lb || []);
         setQuizEnded(true);
         setPhase("ended");
-      })
+      }),
     );
+
     cleanups.push(
-      on("joined-list", ({ studentList }) => setStudents(studentList || []))
+      on("joined-list", ({ studentList }) => setStudents(studentList || [])),
     );
+
     cleanups.push(
       on(
         "rejoin-success",
-        ({ studentList, leaderboard: lb, currentQuestionDetails: cq }) => {
+        ({
+          studentList,
+          leaderboard: lb,
+          currentQuestionDetails: cq,
+          scheduledTime,
+        }) => {
+          setStudents(studentList || []);
+          if (scheduledTime) setScheduledAt(scheduledTime);
+
           if (cq) {
             setCurQues({
               questionIndex: cq.questionIndex,
@@ -248,10 +356,13 @@ export default function TeacherQuizRoom() {
             setLeaderboard(lb || []);
             setPhase("question");
             setTimeLeft(cq.timeLeft || 30);
+          } else if (scheduledTime) {
+            setPhase("scheduled");
+          } else {
+            setPhase("lobby");
           }
-          setStudents(studentList || []);
-        }
-      )
+        },
+      ),
     );
 
     return () => cleanups.forEach((fn) => fn?.());
@@ -259,7 +370,7 @@ export default function TeacherQuizRoom() {
 
   useEffect(() => {
     rejoinAsTeacher(roomId);
-  }, []);
+  }, [roomId]);
 
   const handleStart = () => startQuiz(roomId);
   const handlePause = () => pauseQuiz(roomId);
@@ -272,6 +383,7 @@ export default function TeacherQuizRoom() {
     students.length > 0
       ? Math.round((answeredCount / students.length) * 100)
       : 0;
+
   const isActive = phase === "question" || phase === "reveal";
 
   return (
@@ -280,16 +392,20 @@ export default function TeacherQuizRoom() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
             <div className="flex items-center flex-wrap gap-2">
-              <div className="bg-white border border-gray-200 rounded-lg px-4 py-1.5 font-mono text-[15px] font-medium text-blue-700 tracking-widest">
+              <div className="bg-white border border-gray-200 rounded-full px-4 py-1 font-mono text-[15px] font-medium text-blue-700 tracking-widest">
                 {roomId}
               </div>
 
               {isActive && <LiveBadge />}
               {isPaused && <PausedBadge />}
+              {phase === "scheduled" && scheduledAt && (
+                <ScheduledBadge scheduledAt={scheduledAt} />
+              )}
 
               <span className="inline-flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1 text-xs bg-white text-gray-500">
                 <TeamOutlined />
-                <strong className="text-gray-700">{students.length}</strong>&nbsp;students
+                <strong className="text-gray-700">{students.length}</strong>
+                &nbsp;students
               </span>
 
               <span className="inline-flex items-center gap-1.5 border border-green-300 rounded-full px-3 py-1 text-xs bg-green-50 text-green-700">
@@ -307,6 +423,7 @@ export default function TeacherQuizRoom() {
                   <PlayCircleOutlined /> Start quiz
                 </button>
               )}
+
               {isActive && !quizEnded && (
                 <>
                   {!isPaused ? (
@@ -336,8 +453,47 @@ export default function TeacherQuizRoom() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-
             <div className="flex flex-col gap-4">
+              {phase === "scheduled" && scheduledAt && (
+                <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
+                  <div className="mx-auto w-24 h-24 rounded-full bg-purple-100 flex items-center justify-center mb-6">
+                    <ClockCircleOutlined className="text-5xl text-purple-600" />
+                  </div>
+
+                  <h2 className="text-3xl font-semibold text-gray-800 mb-3">
+                    Quiz is Scheduled
+                  </h2>
+                  <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+                    This quiz will start automatically from the server.
+                  </p>
+
+                  <div className="inline-block bg-purple-50 border border-purple-200 rounded-2xl px-10 py-6 mb-8">
+                    <p className="text-sm uppercase tracking-widest text-purple-600 font-medium mb-1">
+                      Scheduled Start Time
+                    </p>
+                    <p className="text-4xl font-semibold text-purple-700 tabular-nums">
+                      {new Date(scheduledAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                    <p className="text-sm text-purple-500 mt-1">
+                      {new Date(scheduledAt).toLocaleDateString([], {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="text-[15px] text-gray-500 max-w-sm mx-auto">
+                    Students will be allowed to join{" "}
+                    <strong>10 minutes before</strong> the scheduled time.
+                    <br />
+                    You don’t need to manually start the quiz.
+                  </div>
+                </div>
+              )}
 
               {phase === "lobby" && (
                 <div className="bg-white border border-gray-200 rounded-xl p-6">
@@ -382,14 +538,18 @@ export default function TeacherQuizRoom() {
                   <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
                     <div className="flex-1">
                       <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2">
-                        Question {curQues.questionNumber} / {curQues.totalQuestions}
+                        Question {curQues.questionNumber} /{" "}
+                        {curQues.totalQuestions}
                       </p>
                       <p className="text-[18px] font-medium text-gray-800 leading-relaxed">
                         {curQues.question}
                       </p>
                     </div>
                     {phase === "question" && !isPaused && (
-                      <TimerRing timeLeft={timeLeft} total={curQues.timeLimit} />
+                      <TimerRing
+                        timeLeft={timeLeft}
+                        total={curQues.timeLimit}
+                      />
                     )}
                   </div>
 
@@ -420,7 +580,8 @@ export default function TeacherQuizRoom() {
 
                   {phase === "reveal" && (
                     <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-300 rounded-lg text-[13px] text-emerald-700">
-                      <span>✓</span> Time's up — correct answer highlighted above
+                      <span>✓</span> Time's up — correct answer highlighted
+                      above
                     </div>
                   )}
 
@@ -492,7 +653,11 @@ export default function TeacherQuizRoom() {
                     </p>
                   ) : (
                     leaderboard.map((entry, i) => (
-                      <LbRow key={entry.socketId || i} entry={entry} index={i} />
+                      <LbRow
+                        key={entry.socketId || i}
+                        entry={entry}
+                        index={i}
+                      />
                     ))
                   )}
                 </div>

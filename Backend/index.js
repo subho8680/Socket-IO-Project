@@ -9,9 +9,10 @@ import teacherRouter from "./Routes/TeacherRoute.js";
 import studentRouter from "./Routes/StudentRoute.js";
 import leaderBoardRouter from "./Routes/LeaderBoardRoute.js";
 import { connectSocket } from "./SocketConnection.js";
+import { StartScheduler } from "./Scheduler.js";
 const app = express();
 const corsOptions = {
-  origin: "http://localhost:5173",
+  origin: "http://localhost:5174",
   credentials: true,
 };
 app.use(cookieParser());
@@ -23,13 +24,15 @@ app.use("/api/v1/all", leaderBoardRouter);
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5174",
     methods: ["GET", "POST"],
     credentials: true,
   },
 });
-connectSocket(io)
 dotenv.config({});
+connectSocket(io);
+StartScheduler(io);
+
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
   console.log(`server is listening at port ${port}`);
