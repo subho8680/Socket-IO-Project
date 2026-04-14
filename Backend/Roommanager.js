@@ -1,6 +1,6 @@
 const rooms = {};
 let _io = null;
-
+import { roomModel } from "./Models/Room/room.model.js";
 export function init(io) {
   _io = io;
 }
@@ -161,11 +161,17 @@ function resumeQuiz(roomId) {
   return true;
 }
 
-function endQuiz(roomId) {
+const endQuiz = async(roomId) => {
   const room = rooms[roomId];
   if (!room) return false;
   room.status = "ended";
   clearRoomTimers(roomId);
+  const RoomId = room._id;
+  const db_room = await roomModel.findOne({ roomCode: RoomId });
+  if (db_room) {
+    db_room.status = "ended";
+    await db_room.save();
+  }
   return true;
 }
 
@@ -356,15 +362,21 @@ function checkAllAnswered(room, questionIndex) {
 
 const createQuizCore = (io, room) => {
   const roomId = room.roomCode;
+  if (rooms[roomId]) {
+    console.log(`createQuizCore: room ${roomId} already exists, skipping`);
+    return rooms[roomId];
+  }
+  console.log("quiz quesions are", room?.quizId?.questions);
   rooms[roomId] = {
     roomId,
     teacher: {
-      teacherId: room.teacherId || null,
+      teacherId: room.teacherId.toString() || null,
     },
     students: [],
     questions: room?.quizId?.questions || [],
     currentQuestion: -1,
     status: "waiting",
+    scheduledAt: room.scheduledAt || null,
     questionStartedAt: null,
     timers: {},
     createdAt: Date.now(),

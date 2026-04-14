@@ -91,7 +91,7 @@ export const connectSocket = (io) => {
           name: s.name,
           socketId: s.socketId,
         }));
-        console.log("student lis",studentList)
+        console.log("student lis", studentList);
         socket.emit("join-success", {
           roomId,
           studentName: existing.name,
@@ -319,20 +319,21 @@ export const connectSocket = (io) => {
 
     socket.on("rejoin-as-teacher", ({ roomId }) => {
       const room = rm.getRoom(roomId);
+
       if (!room) {
         socket.emit("join-error", { message: "Room no longer exists." });
         return;
       }
+      console.log("teacher coming to join", socket.id);
 
       if (room.teacher.teacherId !== socket.userid) {
+        console.log("join error",room.teacher.teacherId, socket.userid);
         socket.emit("join-error", {
           message: "You are not the teacher of this room.",
         });
         return;
       }
-      if(!room.teacher.socketId){
-        socket.join(roomId);
-      }
+      console.log("teacher rejoining room", roomId);
       rm.updateTeacherSocket(roomId, socket.id);
       socket.join(roomId);
       socket.roomId = roomId;
@@ -366,6 +367,7 @@ export const connectSocket = (io) => {
       socket.emit("rejoin-success", {
         roomId,
         status: room.status,
+        scheduledAt: room.scheduledAt || null,
         currentQuestion: room.currentQuestion,
         totalQuestions: room.questions.length,
         studentList: room.students.map((s) => ({
@@ -471,7 +473,7 @@ export const connectSocket = (io) => {
 
       if (role === "teacher") {
         console.log(`⚠️ Teacher disconnected from room ${roomId}`);
-
+        room.teacher.socketId = null;
         if (room.status === "active") {
           // rm.pauseQuiz(roomId);
         }

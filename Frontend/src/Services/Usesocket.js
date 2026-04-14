@@ -13,7 +13,7 @@ export function useSocket() {
     socketRef.current = socket;
     return () => {};
   }, []);
-  const createRoom = useCallback((teacherName, questions,teacherId) => {
+  const createRoom = useCallback((teacherName, questions, teacherId) => {
     socket?.emit("create-room", { teacherName, questions, teacherId });
   }, []);
 
@@ -21,7 +21,7 @@ export function useSocket() {
     socket?.emit("live-list", { roomId });
   }, []);
 
-  const joinRoom = useCallback((roomId, studentName,studentId) => {
+  const joinRoom = useCallback((roomId, studentName, studentId) => {
     console.log(`Joining room ${roomId} as ${studentName}`);
     socket?.emit("join-room", { roomId, studentName, studentId });
   }, []);
@@ -63,11 +63,17 @@ export function useSocket() {
   }, []);
 
   const rejoinAsTeacher = useCallback((roomId) => {
-    socket?.emit("rejoin-as-teacher", { roomId });
+    if (socket.connected) {
+      socket?.emit("rejoin-as-teacher", { roomId });
+    } else {
+      socket.once("connect", () => {
+        socket?.emit("rejoin-as-teacher", { roomId });
+      });
+    }
   }, []);
 
   const rejoinAsStudent = useCallback((roomId) => {
-    socket?.emit("rejoin-as-student", { roomId});
+    socket?.emit("rejoin-as-student", { roomId });
   }, []);
 
   const on = useCallback((event, callback) => {
@@ -91,6 +97,6 @@ export function useSocket() {
     rejoinAsTeacher,
     rejoinAsStudent,
     on,
-    giveList
+    giveList,
   };
 }
