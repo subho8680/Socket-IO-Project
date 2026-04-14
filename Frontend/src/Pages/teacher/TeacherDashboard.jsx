@@ -19,7 +19,7 @@ import {
 } from "@ant-design/icons";
 import DashboardLayout from "../../components/common/DashboardLayout";
 import { useAuth } from "../../context/AuthContext";
-import { useGetAllQuizRooms } from "../../ApiCall";
+import { useGetAllQuizRooms, useUpdateRoom } from "../../ApiCall";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -291,7 +291,7 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [filter, setFilter] = useState("all");
-
+  const updateRoom = useUpdateRoom();
   const { data, isLoading, isError } = useGetAllQuizRooms();
   const rooms = (data?.rooms || []).map(normaliseRoom);
   console.log("all rooms are", data);

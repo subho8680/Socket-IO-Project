@@ -61,7 +61,7 @@ export default function StudentDashboard() {
 
   const handleJoin = () => {
     setError("");
-    const code = roomCode.trim().toUpperCase();
+    const code = roomCode.trim();
     if (!code) { setError("Please enter a room code"); return; }
     if (code.length < 4) { setError("Room code is too short"); return; }
     setJoining(true);
@@ -122,12 +122,12 @@ export default function StudentDashboard() {
                   <input
                     value={roomCode}
                     onChange={(e) => {
-                      setRoomCode(e.target.value.toUpperCase());
+                      setRoomCode(e.target.value);
                       setError("");
                     }}
                     onKeyDown={(e) => e.key === "Enter" && handleJoin()}
                     placeholder="Enter room code e.g. XK-8291"
-                    maxLength={12}
+                    // maxLength={12}
                     className={`w-full h-11 px-4 font-mono text-[15px] tracking-widest bg-gray-50 border rounded-lg outline-none transition-colors placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-sans text-gray-800 ${error
                         ? "border-red-300 focus:border-red-400"
                         : "border-gray-200 focus:border-blue-400"

@@ -70,8 +70,13 @@ export const getAllQuizes = async (req, res) => {
 };
 export const generateQuestion = async (req, res) => {
   try {
-    const { topic, quesNo, description,difficulty } = req.body;
-    const quizQuestions = await quizCreate({ topic, quesNo, description,difficulty });
+    const { topic, quesNo, description, difficulty } = req.body;
+    const quizQuestions = await quizCreate({
+      topic,
+      quesNo,
+      description,
+      difficulty,
+    });
     return res.status(200).json({
       msg: "Quiz created Successfully",
       quiz: quizQuestions,
@@ -141,6 +146,57 @@ export const getQuizRoomById = async (req, res) => {
     });
   }
 };
+export const getQuizRoomById2 = async (req, res) => {
+  try {
+    const userId = req.id;
+    const quizRoomId = req.params.roomId;
+    console.log("fetching quiz room with id", quizRoomId);
+    const room = await roomModel.findOne({ roomCode: quizRoomId }).populate({
+      path: "quizId",
+    });
+    if (!room) {
+      return res.status(404).json({
+        msg: "Quiz room not found",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      msg: "Quiz Room fetched Successfully",
+      room: room,
+      success: true,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error Fetching quiz",
+      success: false,
+    });
+  }
+};
+export const updateRoom = async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const { scheduledAt } = req.body;
+    const room = await roomModel.findById(roomId);
+    if (!room) {
+      return res.status(404).json({
+        msg: "Quiz room not found",
+        success: false,
+      });
+    }
+    room.scheduledAt = scheduledAt;
+    await room.save();
+    return res.status(200).json({
+      msg: "Quiz room updated successfully",
+      success: true,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error updating quiz",
+      success: false,
+    });
+  }
+};
+
 export const getAllQuizRooms = async (req, res) => {
   try {
     const userId = req.id;

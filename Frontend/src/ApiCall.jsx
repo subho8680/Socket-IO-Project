@@ -118,3 +118,30 @@ export const useGetQuizRoomById = (roomId) =>
       return res.data;
     },
   });
+  export const useGetQuizRoomById2 = (roomId) =>
+  useQuery({
+    queryKey: ["quizRoomSingle", roomId],
+    queryFn: async () => {
+      const res = await axios.get(`${API}/teacher/getQuizRoom2/${roomId}`, {
+        withCredentials: true,
+      });
+      return res.data;
+    },
+  });
+export const useUpdateRoom = (roomId) =>
+  useMutation({
+    mutationFn: async (formData) => {
+      const res = await axios.post(
+        `${API}/teacher/updateRoom/${roomId}`,
+        formData,
+        {
+          withCredentials: true,
+        },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["quizRoomSingle", roomId]);
+      queryClient.invalidateQueries(["quizRooms"]);
+    },
+  });

@@ -42,7 +42,7 @@ export default function AppRouter() {
             <Route path="/teacher/room/:roomId/results" element={<PrivateRoute role="teacher"><QuizResults /></PrivateRoute>} />
 
             <Route path="/student/dashboard" element={<PrivateRoute role="student"><StudentDashboard /></PrivateRoute>} />
-            <Route path="/student/room/:id" element={<PrivateRoute role="student"><StudentQuizRoom /></PrivateRoute>} />
+            <Route path="/student/room/:roomId" element={<PrivateRoute role="student"><StudentQuizRoom /></PrivateRoute>} />
             <Route path="/student/room/:roomId/results" element={<PrivateRoute role="student"><StudentResults /></PrivateRoute>} />
 
             <Route path="/room/:roomId/waiting" element={<PrivateRoute><WaitingRoom /></PrivateRoute>} />

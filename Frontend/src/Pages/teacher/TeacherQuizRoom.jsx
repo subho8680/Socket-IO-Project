@@ -247,10 +247,10 @@ export default function TeacherQuizRoom() {
       const roomCode = data.room.roomCode;
       setRoomId(roomCode);
       setScheduledAt(time);
-      setPhase(status);
+      if(phase == "lobby")setPhase(status);
     }
   }, [data]);
-
+  console.log("phase is", phase);
   const { on, startQuiz, pauseQuiz, resumeQuiz, endQuiz, rejoinAsTeacher } =
     useSocket();
 
@@ -370,7 +370,7 @@ export default function TeacherQuizRoom() {
 
   useEffect(() => {
     rejoinAsTeacher(roomId);
-  }, [roomId]);
+  }, []);
 
   const handleStart = () => startQuiz(roomId);
   const handlePause = () => pauseQuiz(roomId);
