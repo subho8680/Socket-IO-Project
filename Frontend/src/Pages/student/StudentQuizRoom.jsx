@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Spin, Skeleton } from "antd";
+import { Spin } from "antd";
 import {
   TrophyOutlined,
   ThunderboltOutlined,
@@ -8,7 +8,6 @@ import {
   CloseOutlined,
   FireOutlined,
   ClockCircleOutlined,
-  LoadingOutlined,
 } from "@ant-design/icons";
 import { OPTION_COLORS, OPTION_LABELS } from "../../data/mockData";
 import { useAuth } from "../../context/AuthContext";
@@ -16,7 +15,6 @@ import Logo from "../../components/common/Logo";
 import { useSocket } from "../../Services/Usesocket";
 import { toast } from "react-toastify";
 import { useGetQuizRoomById2 } from "../../ApiCall";
-
 const OPT_BG = ["bg-blue-100", "bg-emerald-100", "bg-amber-100", "bg-pink-100"];
 const OPT_TEXT = [
   "text-blue-800",
@@ -40,14 +38,28 @@ function WaitingScreen({ roomId, studentList, myUserId }) {
           <div className="bg-white border border-gray-200 rounded-xl p-8 text-center mb-4">
             <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center mx-auto mb-4">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="#378add" strokeWidth="1.5" />
-                <path d="M12 7v5l3 3" stroke="#378add" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="#378add"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M12 7v5l3 3"
+                  stroke="#378add"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <p className="text-[17px] font-medium text-gray-800 mb-1">
               Waiting for quiz to start
             </p>
-            <p className="text-[13px] text-gray-400">The teacher will begin shortly</p>
+            <p className="text-[13px] text-gray-400">
+              The teacher will begin shortly
+            </p>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -67,61 +79,44 @@ function WaitingScreen({ roomId, studentList, myUserId }) {
                   return (
                     <div
                       key={s.userId || s.socketId || i}
-                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isMe ? "border-blue-300 bg-blue-50" : "border-gray-100 bg-white"
-                        }`}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${
+                        isMe
+                          ? "border-blue-300 bg-blue-50"
+                          : "border-gray-100 bg-white"
+                      }`}
                     >
                       <div
-                        className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-[12px] font-medium flex-shrink-0 ${isMe ? "bg-blue-200 text-blue-800" : "bg-gray-100 text-gray-600"
-                          }`}
+                        className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-[12px] font-medium flex-shrink-0 ${
+                          isMe
+                            ? "bg-blue-200 text-blue-800"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
                       >
                         {s.name?.[0]?.toUpperCase()}
                       </div>
-                      <span className={`text-[13px] ${isMe ? "text-blue-700 font-medium" : "text-gray-700"}`}>
+                      <span
+                        className={`text-[13px] ${
+                          isMe ? "text-blue-700 font-medium" : "text-gray-700"
+                        }`}
+                      >
                         {s.name}
-                        {isMe && <span className="text-[11px] text-gray-400 ml-1">(you)</span>}
+                        {isMe && (
+                          <span className="text-[11px] text-gray-400 ml-1">
+                            (you)
+                          </span>
+                        )}
                       </span>
                     </div>
                   );
                 })
               ) : (
-                <div className="text-center py-8">
-                  <LoadingOutlined className="text-3xl text-gray-400 mb-3" />
-                  <p className="text-[13px] text-gray-400">Waiting for others to join...</p>
-                </div>
+                <p className="text-[13px] text-gray-400 text-center py-6">
+                  No other students yet…
+                </p>
               )}
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function QuestionSkeleton() {
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2">
-        <Skeleton.Input active size="small" className="flex-1 h-1.5" />
-        <Skeleton.Input active size="small" className="w-16" />
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <Skeleton active paragraph={{ rows: 1 }} />
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex gap-3">
-          <Skeleton.Avatar active size={32} />
-          <Skeleton active paragraph={{ rows: 2 }} />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2.5">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white border border-gray-200 rounded-xl p-4">
-            <Skeleton active paragraph={{ rows: 1 }} />
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -133,12 +128,11 @@ export default function StudentQuizRoom() {
   const { user } = useAuth();
   const { on, submitAnswer, giveList, rejoinAsStudent, joinRoom } = useSocket();
   const getQuizRoomById = useGetQuizRoomById2(roomId);
-  const { data, isLoading: isRoomLoading, isError } = getQuizRoomById;
-
+  const { data, isLoading, isError } = getQuizRoomById;
   const myUserId = user?.user?._id || user?._id;
-  const myName = user?.user?.name || user?.name || "Student";
+  const myName = user?.user?.name || user?.name;
 
-  const [phase, setPhase] = useState("loading"); // loading, waiting, question, answered, reveal
+  const [phase, setPhase] = useState("waiting");
   const [studentList, setStudentList] = useState([]);
   const [curQues, setCurQues] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -153,27 +147,52 @@ export default function StudentQuizRoom() {
   const [answeredCorrectly, setAnsweredCorrectly] = useState(null);
   const [nextQuesLoader, setNextQuesLoader] = useState(false);
   const [hasAnsweredCurrent, setHasAnsweredCurrent] = useState(false);
-
+  console.log("quiz room data", data);
   useEffect(() => {
-    if (!myUserId || !roomId || !data?.room) return;
-
-    const status = data.room.status;
-
-    if (status === "active") {
-      rejoinAsStudent(roomId);
-      giveList(roomId);
-    } else if (status === "waiting") {
-      joinRoom(roomId, myName, myUserId);
+    if (!myUserId || !roomId) return;
+    if (data?.room) {
+      const roomData = data.room;
+      const status = roomData.status;
+      if (status === "active") {
+        rejoinAsStudent(roomId);
+        giveList(roomId);
+      } else if (status === "waiting") {
+        console.log("joining room as student", roomId, myName, myUserId);
+        joinRoom(roomId, myName, myUserId);
+        // giveList(roomId);
+      }
     }
-  }, [data, roomId, myUserId, myName, rejoinAsStudent, giveList, joinRoom]);
+  }, [roomId, myUserId, rejoinAsStudent, giveList]);
+  useEffect(() => {
+    if (!myUserId || !roomId) return;
 
+    if (data?.room) {
+      const roomData = data.room;
+      const status = roomData.status;
+      if (status === "active") {
+        rejoinAsStudent(roomId);
+        giveList(roomId);
+      } else if (status === "waiting") {
+        console.log("joining room as student", roomId, myName, myUserId);
+        joinRoom(roomId, myName, myUserId);
+        // giveList(roomId);
+      }
+    }
+  }, [data]);
+
+  console.log("student list", studentList);
   useEffect(() => {
     const cleanups = [];
 
-    cleanups.push(on("joined-list", ({ studentList }) => setStudentList(studentList || [])));
-    cleanups.push(on("take-list", ({ listStu }) => setStudentList(listStu || [])));
-    cleanups.push(on("join-success", ({ studentList }) => setStudentList(studentList)));
-
+    cleanups.push(
+      on("joined-list", ({ studentList }) => setStudentList(studentList || [])),
+    );
+    cleanups.push(
+      on("take-list", ({ listStu }) => setStudentList(listStu || [])),
+    );
+    cleanups.push(
+      on("join-success", ({ studentList }) => setStudentList(studentList)),
+    );
     cleanups.push(
       on("rejoin-success", (data) => {
         setStudentList(data.studentList || []);
@@ -190,52 +209,58 @@ export default function StudentQuizRoom() {
           });
           setTimeLeft(q.timeLeft || 30);
           setHasAnsweredCurrent(q.hasAnsweredCurrent || false);
-          setPhase(q.hasAnsweredCurrent ? "answered" : "question");
+          setPhase("question");
 
           if (q.hasAnsweredCurrent) {
+            setPhase("answered");
             setSelected(q.lastSelectedOption ?? null);
+            setPointsEarned(q.pointsEarned || 0);
+            setHasAnsweredCurrent(true);
           }
         } else if (data.status === "waiting") {
           setPhase("waiting");
         }
-      })
+      }),
     );
-
     cleanups.push(
       on("quiz-started", ({ totalQuestions, message }) => {
         setTotalQuestions(totalQuestions);
         toast.success(message);
-      })
+      }),
     );
-
     cleanups.push(
-      on("new-question", ({
-        questionIndex, question, options, timeLimit, totalQuestions, questionNumber,
-      }) => {
-        setNextQuesLoader(true);
-        setCurQues({
+      on(
+        "new-question",
+        ({
           questionIndex,
           question,
           options,
           timeLimit,
+          totalQuestions,
           questionNumber,
-        });
-        setTotalQuestions(totalQuestions);
-        setSelected(null);
-        setCorrectAnswer(null);
-        setAnsweredCorrectly(null);
-        setPointsEarned(0);
-        setTimeLeft(timeLimit);
-        setHasAnsweredCurrent(false);
-        setIsPaused(false);
-        setPhase("question");
-
-        setTimeout(() => setNextQuesLoader(false), 600);
-      })
+        }) => {
+          setNextQuesLoader(true);
+          setCurQues({
+            questionIndex,
+            question,
+            options,
+            timeLimit,
+            questionNumber,
+          });
+          setTotalQuestions(totalQuestions);
+          setSelected(null);
+          setCorrectAnswer(null);
+          setAnsweredCorrectly(null);
+          setPointsEarned(0);
+          setTimeLeft(timeLimit);
+          setHasAnsweredCurrent(false);
+          setIsPaused(false);
+          setPhase("question");
+          setNextQuesLoader(false);
+        },
+      ),
     );
-
     cleanups.push(on("timer-tick", ({ timeLeft }) => setTimeLeft(timeLeft)));
-
     cleanups.push(
       on("answer-received", ({ isCorrect, pointsEarned, totalScore }) => {
         setAnsweredCorrectly(isCorrect);
@@ -243,18 +268,16 @@ export default function StudentQuizRoom() {
         setScore(totalScore);
         setStreak((prev) => (isCorrect ? prev + 1 : 0));
         setHasAnsweredCurrent(true);
-      })
+      }),
     );
-
     cleanups.push(
       on("time-up", ({ correctAnswer, leaderboard }) => {
         setCorrectAnswer(correctAnswer);
         setPhase("reveal");
         const me = leaderboard.find((s) => s.userId === myUserId);
         if (me) setMyRank(me.rank);
-      })
+      }),
     );
-
     cleanups.push(
       on("leaderboard-update", (leaderboard) => {
         const me = leaderboard.find((s) => s.userId === myUserId);
@@ -262,42 +285,44 @@ export default function StudentQuizRoom() {
           setMyRank(me.rank);
           setScore(me.score);
         }
-      })
+      }),
     );
-
-    cleanups.push(on("already-answered", () => {
-      setPhase("answered");
-      setHasAnsweredCurrent(true);
-    }));
-
-    cleanups.push(on("quiz-paused", () => {
-      setIsPaused(true);
-      toast.warning("Quiz paused by teacher");
-    }));
-
-    cleanups.push(on("quiz-resumed", () => {
-      setIsPaused(false);
-      toast.success("Quiz resumed!");
-    }));
-
+    cleanups.push(
+      on("already-answered", () => {
+        setPhase("answered");
+        setHasAnsweredCurrent(true);
+      }),
+    );
+    cleanups.push(
+      on("quiz-paused", () => {
+        setIsPaused(true);
+        toast.warning("Quiz paused by teacher");
+      }),
+    );
+    cleanups.push(
+      on("quiz-resumed", () => {
+        setIsPaused(false);
+        toast.success("Quiz resumed!");
+      }),
+    );
     cleanups.push(
       on("quiz-ended", ({ leaderboard, myStats }) => {
-        navigate(`/student/room/${roomId}/results`, { state: { leaderboard, myStats } });
-      })
+        navigate(`/student/room/${roomId}/results`, {
+          state: { leaderboard, myStats },
+        });
+      }),
     );
-
     cleanups.push(
       on("you-were-kicked", () => {
         toast.error("You were removed from the room");
         navigate("/student/dashboard");
-      })
+      }),
     );
-
     cleanups.push(
       on("room-closed", () => {
         toast.info("Room was closed by teacher");
         navigate("/student/dashboard");
-      })
+      }),
     );
 
     return () => cleanups.forEach((fn) => fn?.());
@@ -311,34 +336,8 @@ export default function StudentQuizRoom() {
   };
 
   const timerPct = curQues ? (timeLeft / (curQues.timeLimit || 30)) * 100 : 100;
-  const timerColor = timeLeft > 15 ? "#378add" : timeLeft > 8 ? "#ba7517" : "#a32d2d";
-
-  if (isRoomLoading) {
-    return (
-      <div className="min-h-screen bg-[#f5f5f0] flex items-center justify-center">
-        <div className="text-center">
-          <LoadingOutlined className="text-5xl text-blue-600 mb-4" spin />
-          <p className="text-gray-600">Loading quiz room...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="min-h-screen bg-[#f5f5f0] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 text-xl mb-4">Failed to load quiz room</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const timerColor =
+    timeLeft > 15 ? "#378add" : timeLeft > 8 ? "#ba7517" : "#a32d2d";
 
   if (phase === "waiting") {
     return (
@@ -364,7 +363,9 @@ export default function StudentQuizRoom() {
 
           <div className="inline-flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1 text-xs bg-white text-gray-700">
             <TrophyOutlined className="text-amber-500" />
-            <span className="font-medium tabular-nums">{score.toLocaleString()}</span>
+            <span className="font-medium tabular-nums">
+              {score.toLocaleString()}
+            </span>
           </div>
 
           {streak > 1 && (
@@ -384,9 +385,8 @@ export default function StudentQuizRoom() {
           spinning={nextQuesLoader}
           size="large"
           tip="Loading next question..."
-          indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />}
         >
-          {curQues ? (
+          {curQues && (
             <div className="flex flex-col gap-5">
               <div className="flex items-center gap-2">
                 <div className="flex-1 flex gap-1">
@@ -414,7 +414,10 @@ export default function StudentQuizRoom() {
                 <div className="bg-white border border-gray-200 rounded-xl px-4 py-3">
                   <div className="flex justify-between text-[11px] text-gray-400 mb-2">
                     <span className="uppercase tracking-widest">Time left</span>
-                    <span className="font-mono font-medium tabular-nums" style={{ color: timerColor }}>
+                    <span
+                      className="font-mono font-medium tabular-nums"
+                      style={{ color: timerColor }}
+                    >
                       {timeLeft}s
                     </span>
                   </div>
@@ -448,9 +451,13 @@ export default function StudentQuizRoom() {
                 {curQues.options.map((opt, idx) => {
                   const isSelected = selected === idx;
                   const isCorrect = phase === "reveal" && idx === correctAnswer;
-                  const isWrong = phase === "reveal" && selected === idx && idx !== correctAnswer;
+                  const isWrong =
+                    phase === "reveal" &&
+                    selected === idx &&
+                    idx !== correctAnswer;
 
-                  let cardCls = "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50";
+                  let cardCls =
+                    "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50";
                   let textCls = "text-gray-800";
 
                   if (isCorrect) {
@@ -471,16 +478,18 @@ export default function StudentQuizRoom() {
                       key={idx}
                       onClick={() => handleAnswer(idx)}
                       disabled={disabled}
-                      className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-colors duration-150 ${cardCls} ${disabled ? "cursor-default" : "cursor-pointer"
-                        }`}
+                      className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-colors duration-150 ${cardCls} ${
+                        disabled ? "cursor-default" : "cursor-pointer"
+                      }`}
                     >
                       <div
-                        className={`w-[30px] h-[30px] rounded-lg flex items-center justify-center text-xs font-medium flex-shrink-0 ${isCorrect
+                        className={`w-[30px] h-[30px] rounded-lg flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                          isCorrect
                             ? "bg-emerald-200 text-emerald-800"
                             : isWrong
                               ? "bg-red-200 text-red-700"
                               : `${OPT_BG[idx] || "bg-blue-100"} ${OPT_TEXT[idx] || "text-blue-800"}`
-                          }`}
+                        }`}
                       >
                         {phase === "reveal" && isCorrect ? (
                           <CheckOutlined />
@@ -491,7 +500,9 @@ export default function StudentQuizRoom() {
                         )}
                       </div>
 
-                      <span className={`text-[14px] leading-relaxed pt-0.5 flex-1 ${textCls}`}>
+                      <span
+                        className={`text-[14px] leading-relaxed pt-0.5 flex-1 ${textCls}`}
+                      >
                         {opt}
                       </span>
                     </button>
@@ -506,31 +517,42 @@ export default function StudentQuizRoom() {
                   </div>
                   <div>
                     <span className="font-medium">Answer submitted</span>
-                    <span className="text-blue-400 ml-1">— waiting for reveal…</span>
+                    <span className="text-blue-400 ml-1">
+                      — waiting for reveal…
+                    </span>
                   </div>
                 </div>
               )}
 
               {phase === "reveal" && (
                 <div
-                  className={`px-5 py-4 rounded-xl border text-center ${answeredCorrectly === true
+                  className={`px-5 py-4 rounded-xl border text-center ${
+                    answeredCorrectly === true
                       ? "bg-emerald-50 border-emerald-300"
                       : answeredCorrectly === false
                         ? "bg-red-50 border-red-300"
                         : "bg-amber-50 border-amber-300"
-                    }`}
+                  }`}
                 >
                   {answeredCorrectly === true ? (
                     <>
-                      <p className="text-[16px] font-medium text-emerald-700 mb-1">Correct!</p>
+                      <p className="text-[16px] font-medium text-emerald-700 mb-1">
+                        Correct!
+                      </p>
                       <p className="text-[13px] text-emerald-600">
                         +{pointsEarned} points
-                        {streak > 1 && <span className="ml-2 text-amber-600">🔥 {streak} streak</span>}
+                        {streak > 1 && (
+                          <span className="ml-2 text-amber-600">
+                            🔥 {streak} streak
+                          </span>
+                        )}
                       </p>
                     </>
                   ) : answeredCorrectly === false ? (
                     <>
-                      <p className="text-[16px] font-medium text-red-700 mb-1">Incorrect</p>
+                      <p className="text-[16px] font-medium text-red-700 mb-1">
+                        Incorrect
+                      </p>
                       <p className="text-[13px] text-gray-500">
                         Correct answer:{" "}
                         <span className="text-emerald-600 font-medium">
@@ -540,7 +562,9 @@ export default function StudentQuizRoom() {
                     </>
                   ) : (
                     <>
-                      <p className="text-[16px] font-medium text-amber-700 mb-1">Time's up!</p>
+                      <p className="text-[16px] font-medium text-amber-700 mb-1">
+                        Time's up!
+                      </p>
                       <p className="text-[13px] text-gray-500">
                         Correct answer:{" "}
                         <span className="text-emerald-600 font-medium">
@@ -556,15 +580,18 @@ export default function StudentQuizRoom() {
                 <div className="flex items-center gap-1.5">
                   <ThunderboltOutlined />
                   Rank:{" "}
-                  <span className="text-gray-700 font-medium ml-0.5">#{myRank || "--"}</span>
+                  <span className="text-gray-700 font-medium ml-0.5">
+                    #{myRank || "--"}
+                  </span>
                 </div>
                 <div>
-                  {Math.round(((curQues.questionIndex || 0) / totalQuestions) * 100)}% completed
+                  {Math.round(
+                    ((curQues.questionIndex || 0) / totalQuestions) * 100,
+                  )}
+                  % completed
                 </div>
               </div>
             </div>
-          ) : (
-            <QuestionSkeleton />
           )}
         </Spin>
       </main>

@@ -7,9 +7,9 @@ export const StartScheduler = (io) => {
 
   setInterval(async () => {
     try {
-      const now = Date.now();
-      const tenMinFromNow = new Date(now + 10 * 60 * 1000);
-      const nowDate = new Date(now);
+      const now = new Date();
+      const tenMinFromNow = new Date(now.getTime() + 10 * 60 * 1000);
+
       const roomsToWait = await roomModel
         .find({
           status: "scheduled",
@@ -20,36 +20,32 @@ export const StartScheduler = (io) => {
 
       for (const room of roomsToWait) {
         const roomId = room.roomCode;
-        if (rm.roomExists(roomId)) {
-          console.log(
-            `Room ${roomId} already in memory, skipping createQuizCore`,
-          );
-          continue;
-        }
 
-        console.log(`Creating in-memory room ${roomId}`);
+        if (rm.roomExists(roomId)) continue;
+
         rm.createQuizCore(io, room);
+
         await roomModel.updateOne({ _id: room._id }, { status: "waiting" });
       }
 
       const roomsToStart = await roomModel
         .find({
           status: "waiting",
-          scheduledAt: { $lte: nowDate },
+          scheduledAt: { $lte: now },
         })
         .sort({ scheduledAt: 1 });
 
       for (const room of roomsToStart) {
         const roomId = room.roomCode;
 
+        if (room.scheduledAt > now) continue;
+
         if (!rm.roomExists(roomId)) {
-          console.warn(
-            `Room ${roomId} missing from memory on start — recreating`,
-          );
           const populated = await roomModel
             .findById(room._id)
             .populate("quizId");
           if (!populated) continue;
+
           rm.createQuizCore(io, populated);
         }
 
@@ -60,16 +56,15 @@ export const StartScheduler = (io) => {
           inMemRoom.status === "active" ||
           inMemRoom.status === "ended"
         ) {
-          console.log(`Room ${roomId} already active/ended, skipping start`);
           continue;
         }
 
-        console.log(`Auto-starting room ${roomId}`);
         await roomModel.updateOne({ _id: room._id }, { status: "active" });
+
         rm.startQuizCore(io, roomId);
       }
     } catch (err) {
       console.error("Scheduler error:", err);
     }
-  }, 30_000);
+  }, 1000);
 };

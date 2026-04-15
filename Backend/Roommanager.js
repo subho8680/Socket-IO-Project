@@ -95,7 +95,7 @@ function addStudent(roomId, socketId, studentName, studentId) {
   }
 
   const student = {
-    socketId:socketId,
+    socketId: socketId,
     name: studentName,
     score: 0,
     correctAnswers: 0,
@@ -161,7 +161,7 @@ function resumeQuiz(roomId) {
   return true;
 }
 
-const endQuiz = async(roomId) => {
+const endQuiz = async (roomId) => {
   const room = rooms[roomId];
   if (!room) return false;
   room.status = "ended";
@@ -169,11 +169,11 @@ const endQuiz = async(roomId) => {
   const RoomId = room._id;
   const db_room = await roomModel.findOne({ roomCode: RoomId });
   if (db_room) {
-    db_room.status = "ended";
+    db_room.status = "finished";
     await db_room.save();
   }
   return true;
-}
+};
 
 function processAnswer(
   roomId,
@@ -292,7 +292,7 @@ function revealAnswerAndNext(roomId) {
   }, 3000);
 }
 
-function finishQuiz(roomId) {
+async function finishQuiz(roomId) {
   const room = getRoom(roomId);
   if (!room) return;
 
@@ -331,6 +331,11 @@ function finishQuiz(roomId) {
       leaderboard,
       myStats: null,
     });
+  }
+  const db_room = await roomModel.findOne({ roomCode: RoomId });
+  if (db_room) {
+    db_room.status = "finished";
+    await db_room.save();
   }
 }
 
