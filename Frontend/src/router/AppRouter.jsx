@@ -15,6 +15,7 @@ import StudentDashboard from '../Pages/student/StudentDashboard.jsx'
 import StudentQuizRoom from '../Pages/student/StudentQuizRoom.jsx'
 import StudentResults from '../Pages/student/StudentResults.jsx'
 import WaitingRoom from '../Pages/Waitingroom.jsx'
+import ContestProblemSolver from '../Pages/student/Contest/Contest.jsx'
 
 function PrivateRoute({ children, role }) {
     const { user } = useAuth()
@@ -46,7 +47,7 @@ export default function AppRouter() {
             <Route path="/student/room/:roomId/results" element={<PrivateRoute role="student"><StudentResults /></PrivateRoute>} />
 
             <Route path="/room/:roomId/waiting" element={<PrivateRoute><WaitingRoom /></PrivateRoute>} />
-
+            <Route path="/room/contest" element={<PrivateRoute><ContestProblemSolver /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     )
