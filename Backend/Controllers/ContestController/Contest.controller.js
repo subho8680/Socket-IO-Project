@@ -1,6 +1,6 @@
 import { fetchProblems } from "../../Services/ProblemFetcher.js";
 import { scrapeAllProblems } from "../../Services/TestCaseScrapper.js";
-
+import contestModel from "../../Models/ContestModel/contest.model.js";
 export const fetchProblem = async (req, res) => {
   const { minR, maxR, count, tags } = req.body;
   try {
@@ -52,7 +52,7 @@ export const scrapeProblems = async (req, res) => {
     const contestId = `contest_${Date.now()}`;
 
     const contest = {
-      id: contestId,
+      contestId: contestId,
       name: name ?? "Untitled Contest",
       durationMinutes: durationMinutes ?? 120,
       problems: enrichedProblems,
@@ -61,12 +61,12 @@ export const scrapeProblems = async (req, res) => {
       status: "ready",
     };
 
+    const newContest = await contestModel.create(contest);
     console.log("Contest created successfully");
-
     return res.status(200).json({
       success: true,
       message: "Contest created successfully",
-      contest,
+      contest: newContest,
       errors,
     });
   } catch (err) {

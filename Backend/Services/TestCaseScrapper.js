@@ -93,7 +93,7 @@ async function scrapeFullProblemData(contestId, index) {
     const el = $(selector);
     if (!el.length) return "";
     const clone = el.clone();
-    clone.find(".section-title").remove(); 
+    clone.find(".section-title").remove();
     return htmlToText($, clone);
   };
 
@@ -128,7 +128,7 @@ async function scrapeFullProblemData(contestId, index) {
       body: statementBody.trim(),
       inputSpec: sectionToText(".input-specification"),
       outputSpec: sectionToText(".output-specification"),
-      note: sectionToText(".note"), 
+      note: sectionToText(".note"),
     },
   };
 }
@@ -201,7 +201,7 @@ function extractPreText($, preEl) {
   const $pre = $(preEl);
 
   let inner = $pre.html() || "";
-  const directDivs = $pre.children("div"); 
+  const directDivs = $pre.children("div");
   if (directDivs.length > 0) {
     return directDivs
       .map((_, el) => $(el).text())
@@ -212,7 +212,7 @@ function extractPreText($, preEl) {
 
   inner = inner
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, "") 
+    .replace(/<[^>]+>/g, "")
     .trim();
 
   inner = inner
