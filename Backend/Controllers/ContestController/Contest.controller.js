@@ -1,8 +1,10 @@
 import { fetchProblems } from "../../Services/ProblemFetcher.js";
 import { scrapeAllProblems } from "../../Services/TestCaseScrapper.js";
 import contestModel from "../../Models/ContestModel/contest.model.js";
+import { studentModel } from "../../Models/User/Student.model.js";
 export const fetchProblem = async (req, res) => {
   const { minR, maxR, count, tags } = req.body;
+  console.log("request came");
   try {
     const problems = await fetchProblems({
       minRating: minR,
@@ -17,8 +19,12 @@ export const fetchProblem = async (req, res) => {
 };
 
 export const scrapeProblems = async (req, res) => {
-  const { name, durationMinutes, problems } = req.body;
-
+  const { name, durationMinutes, problems, invitedEmails, scheduledAt } =
+    req.body;
+  const user = req.id;
+  const userDetails = await studentModel.findById(user);
+  const email = userDetails.email;
+  invitedEmails.push(email);
   console.log("SCRAPE API HIT");
   console.log(req.body);
 
@@ -58,7 +64,9 @@ export const scrapeProblems = async (req, res) => {
       problems: enrichedProblems,
       createdAt: Date.now(),
       startedAt: null,
-      status: "ready",
+      status: "scheduled",
+      invitedEmails: invitedEmails ?? [],
+      scheduledAt: scheduledAt ?? null,
     };
 
     const newContest = await contestModel.create(contest);
@@ -81,23 +89,50 @@ export const scrapeProblems = async (req, res) => {
 function cleanStatement(text) {
   if (!text) return "";
 
-  return (
-    text
-      .replace(/\$\$\$/g, "")
-      .replace(/\$\$/g, "")
-      .replace(/\$/g, "")
+  return text
+    .replace(/\$\$\$/g, "")
+    .replace(/\$\$/g, "")
+    .replace(/\$/g, "")
 
-      .replace(/\\le/g, "≤")
-      .replace(/\\ge/g, "≥")
-      .replace(/\\neq/g, "≠")
-      .replace(/\\dots/g, "...")
-      .replace(/\\times/g, "×")
-      .replace(/\\cdot/g, "·")
-      .replace(/\\to/g, "→")
-      .replace(/\\rightarrow/g, "→")
+    .replace(/\\le/g, "≤")
+    .replace(/\\ge/g, "≥")
+    .replace(/\\neq/g, "≠")
+    .replace(/\\dots/g, "...")
+    .replace(/\\times/g, "×")
+    .replace(/\\cdot/g, "·")
+    .replace(/\\to/g, "→")
+    .replace(/\\rightarrow/g, "→")
 
-      .replace(/_/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
+    .replace(/_/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
+
+export const getContests = async (req, res) => {
+  try {
+    const id = req.id;
+    const user = await studentModel.findById(id);
+    const email = user.email;
+    const contests = await contestModel
+      .find({ invitedEmails: email })
+      .sort({ createdAt: -1 });
+    return res.status(200).json({
+      status: "success",
+      contests,
+    });
+  } catch (e) {
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
+export const getContestById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const contest = await contestModel.findById(id);
+    return res.status(200).json({
+      status: "success",
+      contest,
+    });
+  } catch (e) {
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};

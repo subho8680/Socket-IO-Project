@@ -13,7 +13,7 @@ import { StartScheduler } from "./Scheduler.js";
 import contestRouter from "./Routes/ContestRoute.js";
 const app = express();
 const corsOptions = {
-  origin: "http://localhost:5173",
+  origin: "http://localhost:5174",
   credentials: true,
 };
 app.use(cookieParser());
@@ -26,7 +26,7 @@ app.use("/api/v1/all", leaderBoardRouter);
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5174",
     methods: ["GET", "POST"],
     credentials: true,
   },

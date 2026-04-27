@@ -109,9 +109,14 @@ const contestSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["ready", "running", "ended"],
-    default: "ready",
+    enum: ["scheduled", "running", "ended"],
+    default: "scheduled",
   },
+  invitedEmails: {
+    type: [String],
+    default: [],
+  },
+  scheduledAt: { type: Date, default: null },
 });
 
 export default mongoose.model("Contest", contestSchema);
