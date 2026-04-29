@@ -2,16 +2,26 @@ export const formatProblemStatement = (text = "") => {
   if (!text) return "";
 
   return text
+    .replace(/\\\\&/g, "&")
+    .replace(/\\&/g, "&")
+    .replace(/\\\\\|/g, "|")
+    .replace(/\\\|/g, "|")
+    .replace(/\\\\_/g, "_")
+    .replace(/\\_/g, "_")
+    .replace(/\\\\\^/g, "^")
+    .replace(/\\\^/g, "^")
+    .replace(/\\\\/g, "\\")
+
+    .replace(/\\ldots|\\cdots|\\dots/g, "...")
+    .replace(/\\leq|\\le/g, "≤")
+    .replace(/\\geq|\\ge/g, "≥")
     .replace(/\\lt/g, "<")
     .replace(/\\gt/g, ">")
-    .replace(/\\le/g, "≤")
-    .replace(/\\ge/g, "≥")
     .replace(/\\neq/g, "≠")
     .replace(/\\approx/g, "≈")
     .replace(/\\equiv/g, "≡")
     .replace(/\\pm/g, "±")
     .replace(/\\mp/g, "∓")
-
     .replace(/\\times/g, "×")
     .replace(/\\cdot/g, "·")
     .replace(/\\div/g, "÷")
@@ -23,7 +33,6 @@ export const formatProblemStatement = (text = "") => {
     .replace(/\\angle/g, "∠")
     .replace(/\\triangle/g, "△")
     .replace(/\\degree/g, "°")
-
     .replace(/\\in\b/g, "∈")
     .replace(/\\notin/g, "∉")
     .replace(/\\subseteq/g, "⊆")
@@ -33,11 +42,11 @@ export const formatProblemStatement = (text = "") => {
     .replace(/\\cap/g, "∩")
     .replace(/\\forall/g, "∀")
     .replace(/\\exists/g, "∃")
-    .replace(/\\rightarrow/g, "→")
-    .replace(/\\to\b/g, "→")
+    .replace(/\\mid/g, "|")
+    .replace(/\\vert/g, "|")
+    .replace(/\\rightarrow|\\to/g, "→")
     .replace(/\\Rightarrow/g, "⇒")
     .replace(/\\leftrightarrow/g, "↔")
-
     .replace(/\\sqrt/g, "√")
     .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "($1/$2)")
 
@@ -55,6 +64,15 @@ export const formatProblemStatement = (text = "") => {
     .replace(/\\omega/g, "ω")
     .replace(/\\rho/g, "ρ")
 
+    .replace(/([a-zA-Z])_(\d+)/g, "$1<sub>$2</sub>")
+    .replace(/([a-zA-Z])_([a-zA-Z])/g, "$1<sub>$2</sub>")
+    .replace(/([a-zA-Z])(\d+)/g, "$1<sub>$2</sub>")
+
+    .replace(/\^(\d+)/g, "<sup>$1</sup>")
+    .replace(/\^([a-zA-Z]+)/g, "<sup>$1</sup>")
+
+    .replace(/\)(\d+)/g, ")<sup>$1</sup>")
+
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&amp;/g, "&")
@@ -64,15 +82,8 @@ export const formatProblemStatement = (text = "") => {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
 
-    .replace(/\b(a|x|y|i|j|k|n|m)(i|j|k|n|m)\b/g, "$1<sub>$2</sub>")
-    .replace(/\b(a|x|y)(a|b|c|x|y)\b/g, "$1<sub>$2</sub>")
-    .replace(/\b(a|x|y|i|j|k|n|m)(\d+)\b/g, "$1<sub>$2</sub>")
-
-    .replace(/\)(\d+)/g, ")<sup>$1</sup>")
-    .replace(/\^([a-zA-Z0-9]+)/g, "<sup>$1</sup>")
-    .replace(/_([a-zA-Z0-9]+)/g, "<sub>$1</sub>")
-
     .replace(/[{}]/g, "")
+    .replace(/\$/g, "")
     .replace(/\n/g, "<br/>")
     .replace(/\s{2,}/g, " ")
     .trim();
