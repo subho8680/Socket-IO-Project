@@ -139,3 +139,7 @@ export const getContestById = async (req, res) => {
     return res.status(500).json({ status: "error", message: e.message });
   }
 };
+
+export const pollCFSubmission = async(req,res)=>{
+  const userId = req.id
+}
