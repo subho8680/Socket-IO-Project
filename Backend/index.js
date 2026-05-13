@@ -11,9 +11,11 @@ import leaderBoardRouter from "./Routes/LeaderBoardRoute.js";
 import { connectSocket } from "./SocketConnection.js";
 import { StartScheduler } from "./Scheduler.js";
 import contestRouter from "./Routes/ContestRoute.js";
+import submissionRouter from "./Routes/SubmissionRoute.js";
+import "./Queues/submissionQueue.js";
 const app = express();
 const corsOptions = {
-  origin: "http://localhost:5174",
+  origin: "http://localhost:5173",
   credentials: true,
 };
 app.use(cookieParser());
@@ -22,11 +24,12 @@ app.use(express.json());
 app.use("/api/v1/teacher", teacherRouter);
 app.use("/api/v1/student", studentRouter);
 app.use("/api/v1/contest", contestRouter);
+app.use("/api/v1/submission", submissionRouter);
 app.use("/api/v1/all", leaderBoardRouter);
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5174",
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
     credentials: true,
   },

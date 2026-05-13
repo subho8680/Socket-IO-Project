@@ -128,6 +128,9 @@ export const getContestById = async (req, res) => {
   try {
     const id = req.params.id;
     const contest = await contestModel.findById(id);
+    if(contest.scheduledAt > new Date()){
+      return res.status(500).json("Contest is not started yet")
+    }
     return res.status(200).json({
       status: "success",
       contest,
@@ -136,3 +139,7 @@ export const getContestById = async (req, res) => {
     return res.status(500).json({ status: "error", message: e.message });
   }
 };
+
+export const pollCFSubmission = async(req,res)=>{
+  const userId = req.id
+}
