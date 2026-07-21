@@ -5,11 +5,11 @@ import { submissionQueue } from "../Queues/submissionQueue.js";
 
 export const createSubmissionRecord = async (req, res) => {
   try {
-    const { contestId, cfContestId, problemIndex, language, cfSubmissionId } =
+    const { contestId, cfContestId, problemIndex, language, submittedCode } =
       req.body;
     const userId = req.id;
 
-    if (!cfContestId || !cfSubmissionId || !problemIndex || !language) {
+    if (!cfContestId || !problemIndex || !language) {
       return res
         .status(400)
         .json({
@@ -47,11 +47,12 @@ export const createSubmissionRecord = async (req, res) => {
     const submission = await Submission.create({
       user: user._id,
       contest: contest._id,
-      cfSubmissionId,
+      cfSubmissionId: null,
       cfContestId,
       problemIndex,
       language,
       verdict: "TESTING",
+      submittedCode : submittedCode,
     });
 
     await submissionQueue.add(
@@ -60,7 +61,7 @@ export const createSubmissionRecord = async (req, res) => {
         submissionId: submission._id.toString(),
         cfHandle: user.CF_Handle,
         cfContestId,
-        cfSubmissionId,
+        cfSubmissionId: null,
         problemIndex,
         language,
         pollCount: 0,

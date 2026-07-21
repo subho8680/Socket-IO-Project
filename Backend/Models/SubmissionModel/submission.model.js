@@ -12,11 +12,7 @@ const submissionSchema = new mongoose.Schema(
       ref: "Contest",
       required: true,
     },
-    cfSubmissionId: {
-      type: Number,
-      required: true,
-      unique: true,
-    },
+    
     cfContestId: {
       type: Number,
       required: true,
@@ -32,6 +28,10 @@ const submissionSchema = new mongoose.Schema(
     verdict: {
       type: String,
       default: "TESTING",
+    },
+    submittedCode:{
+      type:String,
+      required:true
     },
     timeConsumedMillis: {
       type: Number,

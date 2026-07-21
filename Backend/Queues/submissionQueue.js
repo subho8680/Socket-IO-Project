@@ -20,9 +20,9 @@ export const submissionQueue = new Queue("cf-submission-status", {
 const worker = new Worker(
   "cf-submission-status",
   async (job) => {
-    const { submissionId, cfHandle, cfContestId, cfSubmissionId, pollCount = 0 } = job.data;
+    const {cfHandle, cfContestId, pollCount = 0 } = job.data;
 
-    const status = await fetchSubmissionStatus({ cfContestId, cfSubmissionId, cfHandle });
+    const status = await fetchSubmissionStatus({ cfContestId, cfHandle });
     const updatePayload = {
       verdict: status.verdict,
       timeConsumedMillis: status.timeConsumedMillis,
@@ -36,7 +36,7 @@ const worker = new Worker(
     if (!isFinalCodeforcesVerdict(status.verdict) && pollCount < 15) {
       await submissionQueue.add(
         "cf-poll",
-        { submissionId, cfHandle, cfContestId, cfSubmissionId, pollCount: pollCount + 1 },
+        { submissionId, cfHandle, cfContestId, pollCount: pollCount + 1 },
         { delay: 4000 }
       );
     }

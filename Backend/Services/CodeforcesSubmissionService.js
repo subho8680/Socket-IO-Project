@@ -6,9 +6,9 @@ export const isFinalCodeforcesVerdict = (verdict) => {
   return !pending.includes(verdict.toUpperCase());
 };
 
-export const fetchSubmissionStatus = async ({ cfContestId, cfSubmissionId, cfHandle }) => {
-  if (!cfContestId || !cfSubmissionId || !cfHandle) {
-    throw new Error("Missing contest id, submission id, or Codeforces handle.");
+export const fetchSubmissionStatus = async ({ cfContestId, cfHandle }) => {
+  if (!cfContestId || !cfHandle) {
+    throw new Error("Missing contest id or Codeforces handle.");
   }
 
   const url = `${CODEFORCES_API}/contest.status?contestId=${encodeURIComponent(
@@ -31,7 +31,6 @@ export const fetchSubmissionStatus = async ({ cfContestId, cfSubmissionId, cfHan
   }
 
   return {
-    cfSubmissionId: targetSubmission.id,
     cfContestId: targetSubmission.contestId,
     problemIndex: targetSubmission.problem.index,
     verdict: targetSubmission.verdict || "TESTING",
