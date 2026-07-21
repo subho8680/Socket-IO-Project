@@ -35,6 +35,15 @@ export const usegetContestById = (id) =>
     },
   });
 
+export const executeCode = async ({ code, language, input, expectedOutput }) => {
+  const res = await axios.post(
+    `${API}/contest/execute`,
+    { code, language, input, expectedOutput },
+    { withCredentials: true },
+  );
+  return res.data;
+};
+
 export const useGetAllContest = () =>
   useQuery({
     queryKey: ["AllContest"],

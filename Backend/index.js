@@ -38,7 +38,7 @@ dotenv.config({});
 connectSocket(io);
 // StartScheduler(io);
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000;
 server.listen(port, () => {
   console.log(`server is listening at port ${port}`);
   connectDB();

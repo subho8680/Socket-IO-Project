@@ -5,27 +5,43 @@ import { submissionQueue } from "../Queues/submissionQueue.js";
 
 export const createSubmissionRecord = async (req, res) => {
   try {
-    const { contestId, cfContestId, problemIndex, language, cfSubmissionId } = req.body;
+    const { contestId, cfContestId, problemIndex, language, cfSubmissionId } =
+      req.body;
     const userId = req.id;
 
     if (!cfContestId || !cfSubmissionId || !problemIndex || !language) {
-      return res.status(400).json({ success: false, message: "Missing required submission fields." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Missing required submission fields.",
+        });
     }
 
     const user = await studentModel.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "Authenticated student not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Authenticated student not found." });
     }
 
     if (!user.CF_Handle) {
-      return res.status(400).json({ success: false, message: "Student must link a Codeforces handle before submission polling can start." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Student must link a Codeforces handle before submission polling can start.",
+        });
     }
 
     const contest = await contestModel.findOne({
       $or: [{ _id: contestId }, { contestId }],
     });
     if (!contest) {
-      return res.status(404).json({ success: false, message: "Contest not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Contest not found." });
     }
 
     const submission = await Submission.create({
@@ -49,7 +65,7 @@ export const createSubmissionRecord = async (req, res) => {
         language,
         pollCount: 0,
       },
-      { delay: 4000 }
+      { delay: 4000 },
     );
 
     return res.status(201).json({
@@ -67,9 +83,14 @@ export const createSubmissionRecord = async (req, res) => {
 export const getSubmissionById = async (req, res) => {
   try {
     const { id } = req.params;
-    const submission = await Submission.findById(id).populate("user", "name email CF_Handle");
+    const submission = await Submission.findById(id).populate(
+      "user",
+      "name email CF_Handle",
+    );
     if (!submission) {
-      return res.status(404).json({ success: false, message: "Submission not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Submission not found." });
     }
 
     return res.status(200).json({ success: true, submission });

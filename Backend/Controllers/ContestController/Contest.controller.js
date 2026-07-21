@@ -1,5 +1,6 @@
 import { fetchProblems } from "../../Services/ProblemFetcher.js";
 import { scrapeAllProblems } from "../../Services/TestCaseScrapper.js";
+import { executeCodebox } from "../../Services/CodeboxRunner.js";
 import contestModel from "../../Models/ContestModel/contest.model.js";
 import { studentModel } from "../../Models/User/Student.model.js";
 export const fetchProblem = async (req, res) => {
@@ -124,6 +125,30 @@ export const getContests = async (req, res) => {
     return res.status(500).json({ status: "error", message: e.message });
   }
 };
+
+export const executeCode = async (req, res) => {
+  try {
+    const { code, language, input, expectedOutput } = req.body;
+    if (!code || !language) {
+      return res.status(400).json({
+        success: false,
+        message: "Code and language are required.",
+      });
+    }
+
+    const result = await executeCodebox({
+      code,
+      language,
+      input: input ?? "",
+      expectedOutput,
+    });
+    return res.status(200).json({ success: true, result });
+  } catch (err) {
+    console.error("executeCode error:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 export const getContestById = async (req, res) => {
   try {
     const id = req.params.id;

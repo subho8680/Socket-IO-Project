@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Editor from "@monaco-editor/react";
-import { usegetContestById } from "../../../Services/ContestAPI";
-import { useParams } from "react-router-dom";
+import { executeCode, usegetContestById } from "../../../Services/ContestAPI";
+import { useNavigate, useParams } from "react-router-dom";
 import { formatProblemStatement } from "../../../data/NormalizeStatement";
 const fontLink = document.createElement("link");
 fontLink.rel = "stylesheet";
@@ -128,11 +128,13 @@ function normalizeContest(raw) {
     startedAt, // timestamp in ms
     scheduledAt, // Date object
     status: contestData.status ?? "scheduled",
-    problems: (contestData.problems ?? []).map((p,idx) => ({
+    problems: (contestData.problems ?? []).map((p, idx) => ({
       idx: String.fromCharCode(65 + idx),
       name: p.name ?? "Untitled",
       rating: p.rating ?? 0,
       tags: p.tags ?? [],
+      contestId: p.contestId ?? null,
+      index: p.index ?? null,
       tl: p.timeLimitMs != null ? `${Math.floor(p.timeLimitMs / 1000)}s` : "2s",
       ml: p.memLimitMb != null ? `${p.memLimitMb}MB` : "256MB",
       url: p.url ?? null,
@@ -172,9 +174,35 @@ const verdictInfo = (v, t) => {
   if (v === "Wrong Answer") return { c: t.red, bg: t.redBg, short: "WA" };
   if (v === "Time Limit Exceeded")
     return { c: t.yellow, bg: t.yellowBg, short: "TLE" };
+  if (v === "Compilation Error") return { c: t.red, bg: t.redBg, short: "CE" };
   if (v === "Runtime Error") return { c: t.red, bg: t.redBg, short: "RE" };
+  if (v === "Internal Error") return { c: t.red, bg: t.redBg, short: "IE" };
   return { c: t.textMuted, bg: t.bgSub, short: "···" };
 };
+const normalizeText = (text) => String(text ?? "").replace(/\r/g, "").trim();
+
+const formatMs = (time) => {
+  if (time === null || time === undefined || time === "") return "â€”";
+  const ms = Math.round(Number(time) * 1000);
+  return Number.isFinite(ms) ? `${ms}ms` : `${time}s`;
+};
+
+const formatMemory = (memory) => {
+  if (memory === null || memory === undefined || memory === "") return "â€”";
+  const numeric = Number(memory);
+  if (!Number.isFinite(numeric)) return String(memory);
+  return numeric > 1024 ? `${(numeric / 1024).toFixed(1)}MB` : `${numeric}KB`;
+};
+
+const resultText = (result) =>
+  normalizeText(
+    result?.stdout ??
+    result?.compileOutput ??
+    result?.stderr ??
+    result?.message ??
+    "",
+  );
+
 function LoadingSkeleton({ t, ff }) {
   const pulse = {
     background: t.bgSub,
@@ -268,7 +296,7 @@ export default function Contest({
   const [leftW, setLeftW] = useState(420);
   const [rightW, setRightW] = useState(400);
   const dragging = useRef(null);
-
+  const navigate = useNavigate();
   useEffect(() => {
     if (contest) setProbIdx(0);
   }, [contest?.title]);
@@ -278,6 +306,13 @@ export default function Contest({
   const code = codes[codeKey] ?? lang.tmpl;
   const probSubs = prob ? subs[prob.idx] || [] : [];
   const solved = probSubs.some((s) => s.verdict === "Accepted");
+  const cfSubmitUrl =
+    prob?.contestId && prob?.index
+      ? `https://codeforces.com/contest/${prob.contestId}/submit/${prob.index}`
+      : prob?.url?.replace("/problem/", "/submit/");
+  const cfLoginUrl = cfSubmitUrl
+    ? `https://codeforces.com/enter?back=${encodeURIComponent(cfSubmitUrl)}`
+    : "https://codeforces.com/enter";
 
   useEffect(() => {
     if (!contest) return;
@@ -341,86 +376,101 @@ export default function Contest({
     [codeKey],
   );
 
+
+
+  const submitCode = async (problem) => {
+
+    console.log("cfsubmission is", problem)
+    window.open(cfSubmitUrl, "_blank");
+    const submitPayload = {
+
+    }
+  };
   const runCode = async () => {
     if (!prob) return;
     setRunning(true);
     setRunRes(null);
     setRightTab("result");
-    await new Promise((r) => setTimeout(r, 700 + Math.random() * 500));
-    if (useCustom) {
+
+    try {
+      if (useCustom) {
+        const payload = {
+          code,
+          language: lang.id,
+          input: customIn ?? "",
+        };
+        const data = await executeCode(payload);
+        if (!data.success) {
+          setRunRes({
+            type: "custom",
+            out: "",
+            error: data.message || "Execution failed.",
+          });
+        } else {
+          const result = data.result;
+          setRunRes({
+            type: "custom",
+            verdict: result.label,
+            out: normalizeText(result.stdout),
+            stderr: normalizeText(result.stderr),
+            compileOutput: normalizeText(result.compileOutput),
+            message: normalizeText(result.message),
+            exitCode: result.exitCode,
+            time: result.time,
+            memory: result.memory,
+          });
+        }
+      } else {
+        const cases = await Promise.all(
+          prob.cases.map(async (c, i) => {
+            try {
+              const payload = {
+                code,
+                language: lang.id,
+                input: c.i ?? "",
+                expectedOutput: c.o ?? "",
+              };
+              const data = await executeCode(payload);
+              const result = data.result;
+              const got = resultText(result);
+              const expected = normalizeText(c.o);
+              const pass = result.status === "accepted" || got === expected;
+              const timeMs = result.time
+                ? Math.round(Number(result.time) * 1000)
+                : null;
+              return {
+                i: i + 1,
+                input: c.i,
+                expected: c.o,
+                got,
+                verdict: result.label,
+                pass,
+                ms: timeMs ?? Math.floor(Math.random() * 60 + 8),
+              };
+            } catch (err) {
+              return {
+                i: i + 1,
+                input: c.i,
+                expected: c.o,
+                got: `Execution error: ${err.message}`,
+                pass: false,
+                ms: 0,
+              };
+            }
+          }),
+        );
+        setRunRes({ type: "samples", cases });
+      }
+    } catch (err) {
       setRunRes({
         type: "custom",
-        out:
-          (customIn || "")
-            .trim()
-            .split("\n")
-            .map(() => String(Math.floor(Math.random() * 100)))
-            .join("\n") || "0",
+        out: "",
+        error: err.message,
       });
-    } else {
-      setRunRes({
-        type: "samples",
-        cases: prob.cases.map((c, i) => {
-          const pass = Math.random() > 0.35;
-          return {
-            i: i + 1,
-            input: c.i,
-            expected: c.o,
-            got: pass ? c.o : String(Math.floor(Math.random() * 10)),
-            pass,
-            ms: Math.floor(Math.random() * 60 + 8),
-          };
-        }),
-      });
+    } finally {
+      setRunning(false);
     }
-    setRunning(false);
   };
-
-  const submitCode = async () => {
-    if (!prob) return;
-    setConfirm(false);
-    setSubmitting(true);
-    setRightTab("submissions");
-    const id = Date.now();
-    const pending = {
-      id,
-      lang: lang.label,
-      verdict: "Pending",
-      time: "—",
-      mem: "—",
-      code,
-      at: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-    setSubs((p) => ({ ...p, [prob.idx]: [pending, ...(p[prob.idx] || [])] }));
-    await new Promise((r) => setTimeout(r, 1400 + Math.random() * 900));
-    const roll = Math.random();
-    const verdict =
-      roll < 0.52
-        ? "Accepted"
-        : roll < 0.75
-          ? "Wrong Answer"
-          : roll < 0.88
-            ? "Time Limit Exceeded"
-            : "Runtime Error";
-    setSubs((p) => ({
-      ...p,
-      [prob.idx]: (p[prob.idx] || []).map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              verdict,
-              time: Math.floor(Math.random() * 280 + 20) + "ms",
-              mem: Math.floor(Math.random() * 40 + 12) + "MB",
-            }
-          : s,
-      ),
-    }));
-    setSubmitting(false);
-  };
-
   const tab = (active) => ({
     flex: 1,
     padding: "11px 0",
@@ -532,7 +582,7 @@ export default function Contest({
                 color: t.textSub,
                 fontSize: 13,
                 lineHeight: 1.7,
-                marginBottom: 22,
+                marginBottom: 14,
                 fontFamily: ff,
               }}
             >
@@ -545,6 +595,39 @@ export default function Contest({
                 {prob.idx}. {prob.name}
               </span>
               .
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                padding: "11px 12px",
+                marginBottom: 18,
+                borderRadius: 8,
+                border: `1px solid ${t.yellow}55`,
+                background: t.yellowBg,
+                color: t.text,
+                fontSize: 12,
+                lineHeight: 1.55,
+                fontFamily: ff,
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={t.yellow}
+                strokeWidth="2"
+                style={{ flexShrink: 0, marginTop: 1 }}
+              >
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <div>
+                You must be logged in to Codeforces before submitting. If you
+                are not logged in, go to the Codeforces login page first.
+              </div>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button
@@ -565,7 +648,26 @@ export default function Contest({
                 Cancel
               </button>
               <button
-                onClick={submitCode}
+                onClick={() => {
+                  window.location.href = cfLoginUrl;
+                }}
+                style={{
+                  flex: 1.6,
+                  height: 38,
+                  borderRadius: 8,
+                  border: `1px solid ${t.border}`,
+                  background: t.bgSub,
+                  color: t.text,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  fontFamily: ff,
+                }}
+              >
+                Login to CF
+              </button>
+              <button
+                onClick={submitCode(prob)}
                 style={{
                   flex: 2,
                   height: 38,
@@ -1614,9 +1716,9 @@ function RankingsPane({ board, me, probs, t, ff, fm }) {
                     if (!isMe) e.currentTarget.style.background = t.bgHover;
                   }}
                   onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = isMe
-                      ? t.accentBg
-                      : "transparent")
+                  (e.currentTarget.style.background = isMe
+                    ? t.accentBg
+                    : "transparent")
                   }
                 >
                   <td
@@ -1841,6 +1943,24 @@ function ResultPane({ res, running, t, ff, fm }) {
   if (res.type === "custom")
     return (
       <div style={{ padding: 16, fontFamily: ff }}>
+        {res.verdict ? (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              color: verdictInfo(res.verdict, t).c,
+              background: verdictInfo(res.verdict, t).bg,
+              borderRadius: 6,
+              padding: "5px 9px",
+              fontSize: 12,
+              fontWeight: 700,
+              marginBottom: 12,
+            }}
+          >
+            {res.verdict}
+          </div>
+        ) : null}
         <div
           style={{
             fontSize: 11,
@@ -1867,8 +1987,82 @@ function ResultPane({ res, running, t, ff, fm }) {
             whiteSpace: "pre-wrap",
           }}
         >
-          {res.out}
+          {res.out || ""}
         </pre>
+        {res.stderr ? (
+          <div style={{ marginTop: 14 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                color: t.textMuted,
+                marginBottom: 8,
+              }}
+            >
+              Error
+            </div>
+            <pre
+              style={{
+                margin: 0,
+                background: t.redBg,
+                border: `1px solid ${t.red}55`,
+                borderRadius: 9,
+                padding: "14px",
+                fontSize: 13,
+                color: t.red,
+                fontFamily: fm,
+                lineHeight: 1.65,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {res.stderr}
+            </pre>
+          </div>
+        ) : null}
+        {res.compileOutput ? (
+          <div style={{ marginTop: 14 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                color: t.textMuted,
+                marginBottom: 8,
+              }}
+            >
+              Compile Output
+            </div>
+            <pre
+              style={{
+                margin: 0,
+                background: t.redBg,
+                border: `1px solid ${t.red}55`,
+                borderRadius: 9,
+                padding: "14px",
+                fontSize: 13,
+                color: t.red,
+                fontFamily: fm,
+                lineHeight: 1.65,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {res.compileOutput}
+            </pre>
+          </div>
+        ) : null}
+        {res.message ? (
+          <div style={{ marginTop: 14, color: t.red, fontSize: 13 }}>
+            {res.message}
+          </div>
+        ) : null}
+        {res.error ? (
+          <div style={{ marginTop: 14, color: t.red, fontSize: 13 }}>
+            {res.error}
+          </div>
+        ) : null}
       </div>
     );
   const passed = res.cases.filter((c) => c.pass).length;
@@ -1995,6 +2189,7 @@ function ResultPane({ res, running, t, ff, fm }) {
               {[
                 ["Input", c.input],
                 ["Expected", c.expected],
+                ["Verdict", c.verdict],
                 ["Got", c.got],
               ].map(([lbl, val]) => (
                 <div key={lbl}>
@@ -2106,8 +2301,8 @@ function SubsPane({ subs, t, ff, fm }) {
                   e.currentTarget.style.background = t.bgHover;
               }}
               onMouseLeave={(e) =>
-                (e.currentTarget.style.background =
-                  s.verdict === "Accepted" ? t.greenBg : t.bgSub)
+              (e.currentTarget.style.background =
+                s.verdict === "Accepted" ? t.greenBg : t.bgSub)
               }
             >
               <span
