@@ -1,6 +1,45 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Editor from "@monaco-editor/react";
 import {
+  ConfigProvider,
+  theme as antdTheme,
+  Button,
+  Select,
+  Checkbox,
+  Tabs,
+  Table,
+  Segmented,
+  Card,
+  Tag,
+  Alert,
+  Modal,
+  Avatar,
+  Collapse,
+  Empty,
+  Skeleton,
+  Spin,
+  Result,
+  Typography,
+  Badge,
+} from "antd";
+import {
+  CloseOutlined,
+  BulbOutlined,
+  BulbFilled,
+  ClockCircleOutlined,
+  ReloadOutlined,
+  PlayCircleOutlined,
+  SendOutlined,
+  CheckCircleFilled,
+  CloseCircleFilled,
+  WarningOutlined,
+  ThunderboltOutlined,
+  LinkOutlined,
+  StarFilled,
+  FileTextOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
+import {
   createSubmission,
   executeCode,
   usegetContestById,
@@ -11,6 +50,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { formatProblemStatement } from "../../../data/NormalizeStatement";
 import { useSocket } from "../../../Services/Usesocket";
 import { useQueryClient } from "@tanstack/react-query";
+
 const fontLink = document.createElement("link");
 fontLink.rel = "stylesheet";
 fontLink.href =
@@ -28,9 +68,9 @@ const T = {
     surfaceRaised: "#282828",
     border: "#3a3a3a",
     borderFaint: "#2e2e2e",
-    text: "#eff1f6",
-    textSub: "#a6aab4",
-    textMuted: "#5c5c5c",
+    text: "#f4f6fb",
+    textSub: "#c8cfde",
+    textMuted: "#8e97a8",
     accent: "#ffa116",
     accentBg: "#ffa11618",
     accentHover: "#ffb84d",
@@ -47,21 +87,21 @@ const T = {
     monacoTheme: "vs-dark",
     scrollbar: "#3a3a3a",
     tagBg: "#2e2e2e",
-    tagText: "#a6aab4",
+    tagText: "#d8dfe9",
     codeBg: "#1a1a1a",
   },
   light: {
-    bg: "#f7f8fa",
+    bg: "#f5f7fb",
     bgSub: "#ffffff",
-    bgHover: "#f0f0f0",
-    bgActive: "#e8e8e8",
+    bgHover: "#eef2f7",
+    bgActive: "#e5ebf3",
     surface: "#ffffff",
     surfaceRaised: "#ffffff",
-    border: "#e4e4e4",
-    borderFaint: "#efefef",
-    text: "#1a1a1a",
-    textSub: "#4a4a4a",
-    textMuted: "#999",
+    border: "#d7dde8",
+    borderFaint: "#e8edf4",
+    text: "#0f172a",
+    textSub: "#1f2937",
+    textMuted: "#4b5563",
     accent: "#ffa116",
     accentBg: "#fff7e6",
     accentHover: "#ff8c00",
@@ -77,8 +117,8 @@ const T = {
     purpleBg: "#f3f0ff",
     monacoTheme: "vs",
     scrollbar: "#d4d4d4",
-    tagBg: "#f0f0f0",
-    tagText: "#5a5a5a",
+    tagBg: "#eef2f7",
+    tagText: "#334155",
     codeBg: "#f7f8fa",
   },
 };
@@ -161,13 +201,13 @@ function normalizeContest(raw) {
 }
 
 const BOARD = [
-  { h: "tourist", f: "🇧🇾", s: 4, p: 187, ac: { A: 12, B: 28, C: 51, D: 187 } },
-  { h: "ecnerwala", f: "🇺🇸", s: 3, p: 134, ac: { A: 8, B: 22, C: 134 } },
-  { h: "Petr", f: "🇨🇿", s: 3, p: 156, ac: { A: 15, B: 41, C: 156 } },
-  { h: "arjun_s", f: "🇮🇳", s: 2, p: 74, ac: { A: 12, B: 74 } },
-  { h: "suman_k", f: "🇮🇳", s: 1, p: 18, ac: { A: 18 } },
-  { h: "priya_m", f: "🇮🇳", s: 1, p: 25, ac: { A: 25 } },
-  { h: "rohan_v", f: "🇮🇳", s: 0, p: 0, ac: {} },
+  { h: "tourist", f: "Belarus", s: 4, p: 187, ac: { A: 12, B: 28, C: 51, D: 187 } },
+  { h: "ecnerwala", f: "United States", s: 3, p: 134, ac: { A: 8, B: 22, C: 134 } },
+  { h: "Petr", f: "Czech Republic", s: 3, p: 156, ac: { A: 15, B: 41, C: 156 } },
+  { h: "arjun_s", f: "India", s: 2, p: 74, ac: { A: 12, B: 74 } },
+  { h: "suman_k", f: "India", s: 1, p: 18, ac: { A: 18 } },
+  { h: "priya_m", f: "India", s: 1, p: 25, ac: { A: 25 } },
+  { h: "rohan_v", f: "India", s: 0, p: 0, ac: {} },
 ];
 
 const ratingStyle = (r, t) => {
@@ -225,61 +265,21 @@ const resultText = (result) =>
   );
 
 function LoadingSkeleton({ t, ff }) {
-  const pulse = {
-    background: t.bgSub,
-    borderRadius: 6,
-    animation: "_pulse 1.4s ease-in-out infinite",
-  };
   return (
     <div style={{ padding: 32, fontFamily: ff }}>
-      <style>{`@keyframes _pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
-      <div style={{ ...pulse, height: 24, width: "60%", marginBottom: 16 }} />
-      <div style={{ ...pulse, height: 14, width: "40%", marginBottom: 24 }} />
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          style={{
-            ...pulse,
-            height: 12,
-            width: `${80 - i * 10}%`,
-            marginBottom: 12,
-          }}
-        />
-      ))}
+      <Skeleton active title={{ width: "60%" }} paragraph={{ rows: 4 }} />
     </div>
   );
 }
 
 function ErrorState({ t, ff, message }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        padding: 52,
-        color: t.red,
-        fontFamily: ff,
-        textAlign: "center",
-      }}
-    >
-      <svg
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
-      </svg>
-      <span style={{ fontSize: 13 }}>
-        {message ?? "Failed to load contest"}
-      </span>
+    <div style={{ fontFamily: ff }}>
+      <Result
+        status="error"
+        icon={<ExclamationCircleOutlined style={{ color: t.red }} />}
+        title={<span style={{ color: t.red, fontSize: 14 }}>{message ?? "Failed to load contest"}</span>}
+      />
     </div>
   );
 }
@@ -295,6 +295,53 @@ export default function Contest({
   const t = dark ? T.dark : T.light;
   const ff = `'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
   const fm = `'Geist Mono', 'Fira Code', 'Cascadia Code', monospace`;
+  const contestTheme = {
+    algorithm: dark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+    token: {
+      colorPrimary: t.accent,
+      colorBgBase: t.bg,
+      colorBgContainer: t.surface,
+      colorBgElevated: t.surfaceRaised,
+      colorBorder: t.border,
+      colorText: t.text,
+      colorTextSecondary: t.textSub,
+      colorTextTertiary: t.textMuted,
+      colorTextQuaternary: t.textMuted,
+      borderRadius: 8,
+      fontFamily: ff,
+    },
+    components: {
+      Button: {
+        defaultBg: t.surface,
+        defaultBorderColor: t.border,
+        defaultColor: t.text,
+        defaultHoverColor: t.accent,
+        defaultHoverBorderColor: t.accent,
+      },
+      Card: { colorBgContainer: t.surface, colorBorderSecondary: t.border },
+      Collapse: { headerBg: t.bgSub, contentBg: t.surface, colorBorder: t.border },
+      Input: { colorBgContainer: t.surface, colorBorder: t.border, colorText: t.text },
+      Modal: { contentBg: t.surface, headerBg: t.surface, titleColor: t.text },
+      Segmented: { trackBg: t.bgHover, itemColor: t.textSub, itemSelectedBg: t.surface, itemSelectedColor: t.text },
+      Select: {
+        colorBgContainer: t.surface,
+        colorBorder: t.border,
+        colorText: t.text,
+        optionSelectedBg: t.accentBg,
+        optionSelectedColor: t.text,
+      },
+      Table: {
+        colorBgContainer: t.surface,
+        colorText: t.text,
+        colorTextHeading: t.text,
+        headerBg: t.bgSub,
+        headerColor: t.textSub,
+        borderColor: t.border,
+        rowHoverBg: t.bgHover,
+      },
+      Tabs: { itemColor: t.textMuted, itemActiveColor: t.accent, itemSelectedColor: t.accent },
+    },
+  };
   const { data: rawContest, isLoading, isError } = usegetContestById(contestId);
   console.log("data is", rawContest);
   const contest = normalizeContest(rawContest) ?? contestProp ?? null;
@@ -319,11 +366,17 @@ export default function Contest({
   const dragging = useRef(null);
   const navigate = useNavigate();
   const { on } = useSocket();
+  const prob = contest?.problems?.[probIdx] ?? null;
   useEffect(() => {
     if (contest) setProbIdx(0);
   }, [contest?.title]);
 
-  const prob = contest?.problems?.[probIdx] ?? null;
+  useEffect(() => {
+    setRunRes(null);
+    setRightTab("testcase");
+  }, [prob?.idx]);
+
+
   const { data: savedSubmissions = EMPTY_SUBMISSIONS } = useUserSubmissions(
     prob?.contestId,
     prob?.index,
@@ -602,44 +655,58 @@ export default function Contest({
       setRunning(false);
     }
   };
-  const tab = (active) => ({
-    flex: 1,
-    padding: "11px 0",
-    border: "none",
-    background: "none",
-    cursor: "pointer",
-    fontFamily: ff,
-    fontSize: 12,
-    fontWeight: 600,
-    letterSpacing: "0.01em",
-    color: active ? t.text : t.textMuted,
-    borderBottom: `2px solid ${active ? t.accent : "transparent"}`,
-    transition: "all .15s",
-  });
 
   if (isLoading && !contestProp) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100vh",
-          background: t.bg,
-          fontFamily: ff,
-          color: t.text,
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 16,
-        }}
-      >
-        <Spin c={t.accent} sz={32} />
-        <span style={{ fontSize: 14, color: t.textSub }}>Loading contest…</span>
-      </div>
+      <ConfigProvider theme={contestTheme}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
+            background: t.bg,
+            fontFamily: ff,
+            color: t.text,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 16,
+          }}
+        >
+          <Spin size="large" />
+          <span style={{ fontSize: 14, color: t.textSub }}>Loading contest…</span>
+        </div>
+      </ConfigProvider>
     );
   }
 
   if ((isError || !contest) && !contestProp) {
     return (
+      <ConfigProvider theme={contestTheme}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
+            background: t.bg,
+            fontFamily: ff,
+            color: t.text,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 16,
+          }}
+        >
+          <ErrorState
+            t={t}
+            ff={ff}
+            message="Failed to load contest. Please try again."
+          />
+        </div>
+      </ConfigProvider>
+    );
+  }
+
+  return (
+    <ConfigProvider theme={contestTheme}>
       <div
         style={{
           display: "flex",
@@ -648,334 +715,78 @@ export default function Contest({
           background: t.bg,
           fontFamily: ff,
           color: t.text,
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 16,
+          overflow: "hidden",
         }}
       >
-        <ErrorState
-          t={t}
-          ff={ff}
-          message="Failed to load contest. Please try again."
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        background: t.bg,
-        fontFamily: ff,
-        color: t.text,
-        overflow: "hidden",
-      }}
-    >
-      {confirm && prob && (
-        <div
-          onClick={() => setConfirm(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.65)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+        <Modal
+          open={confirm && Boolean(prob)}
+          onCancel={() => setConfirm(false)}
+          footer={null}
+          centered
+          title="Confirm Submission"
+          styles={{ body: { fontFamily: ff } }}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: t.surface,
-              border: `1px solid ${t.border}`,
-              borderRadius: 14,
-              padding: 28,
-              width: 360,
-              boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: 17,
-                marginBottom: 6,
-                fontFamily: ff,
-              }}
-            >
-              Confirm Submission
-            </div>
-            <div
-              style={{
-                color: t.textSub,
-                fontSize: 13,
-                lineHeight: 1.7,
-                marginBottom: 14,
-                fontFamily: ff,
-              }}
-            >
-              Submitting{" "}
-              <span style={{ color: t.text, fontWeight: 600 }}>
-                {lang.label}
-              </span>{" "}
-              solution for{" "}
-              <span style={{ color: t.accent, fontWeight: 600 }}>
-                {prob.idx}. {prob.name}
-              </span>
-              .
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                padding: "11px 12px",
-                marginBottom: 18,
-                borderRadius: 8,
-                border: `1px solid ${t.yellow}55`,
-                background: t.yellowBg,
-                color: t.text,
-                fontSize: 12,
-                lineHeight: 1.55,
-                fontFamily: ff,
-              }}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={t.yellow}
-                strokeWidth="2"
-                style={{ flexShrink: 0, marginTop: 1 }}
+          {prob && (
+            <>
+              <div
+                style={{
+                  color: t.textSub,
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  marginBottom: 14,
+                  fontFamily: ff,
+                }}
               >
-                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              <div>
-                You must be logged in to Codeforces before submitting. If you
-                are not logged in, go to the Codeforces login page first.
+                Submitting{" "}
+                <span style={{ color: t.text, fontWeight: 600 }}>
+                  {lang.label}
+                </span>{" "}
+                solution for{" "}
+                <span style={{ color: t.accent, fontWeight: 600 }}>
+                  {prob.idx}. {prob.name}
+                </span>
+                .
               </div>
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => setConfirm(false)}
-                style={{
-                  flex: 1,
-                  height: 38,
-                  borderRadius: 8,
-                  border: `1px solid ${t.border}`,
-                  background: "transparent",
-                  color: t.text,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  fontFamily: ff,
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  window.location.href = cfLoginUrl;
-                }}
-                style={{
-                  flex: 1.6,
-                  height: 38,
-                  borderRadius: 8,
-                  border: `1px solid ${t.border}`,
-                  background: t.bgSub,
-                  color: t.text,
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  fontFamily: ff,
-                }}
-              >
-                Login to CF
-              </button>
-              <button
-                onClick={() => submitCode(prob)}
-                style={{
-                  flex: 2,
-                  height: 38,
-                  borderRadius: 8,
-                  border: "none",
-                  background: t.accent,
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  fontFamily: ff,
-                }}
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <header
-        style={{
-          height: 52,
-          background: t.surface,
-          borderBottom: `1px solid ${t.border}`,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 16px",
-          gap: 12,
-          flexShrink: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flex: 1,
-            minWidth: 0,
-          }}
-        >
-          {onExit && (
-            <button onClick={onExit} style={iconBtnStyle(t)}>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          )}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginRight: 4,
-              flexShrink: 0,
-            }}
-          >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                background: t.accent,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M16 18L22 12L16 6"
-                  stroke="#fff"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M8 6L2 12L8 18"
-                  stroke="#fff"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <span
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: t.text,
-                fontFamily: ff,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              ContestPad
-            </span>
-          </div>
-          <div
-            style={{
-              width: 1,
-              height: 20,
-              background: t.border,
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 500,
-              color: t.textSub,
-              fontFamily: ff,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: 220,
-            }}
-          >
-            {contest?.title ?? "—"}
-          </span>
-
-          <div style={{ display: "flex", gap: 3, marginLeft: 4 }}>
-            {(contest?.problems ?? []).map((p, i) => {
-              const ps = subs[p.idx] || [];
-              const ok = isProblemSolved(p);
-              const tried = ps.length > 0 && !ok;
-              return (
-                <button
-                  key={p.idx}
-                  onClick={() => setProbIdx(i)}
-                  style={{
-                    padding: "4px 11px",
-                    borderRadius: 6,
-                    border: `1px solid ${probIdx === i ? t.accent : ok ? t.green + "44" : tried ? t.red + "33" : t.border}`,
-                    background:
-                      probIdx === i
-                        ? t.accentBg
-                        : ok
-                          ? t.greenBg
-                          : tried
-                            ? t.redBg
-                            : "transparent",
-                    color:
-                      probIdx === i
-                        ? t.accent
-                        : ok
-                          ? t.green
-                          : tried
-                            ? t.red
-                            : t.textSub,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: ff,
-                    transition: "all .15s",
+              <Alert
+                type="warning"
+                showIcon
+                icon={<WarningOutlined />}
+                style={{ marginBottom: 18, fontFamily: ff, fontSize: 12 }}
+                message="You must be logged in to Codeforces before submitting. If you are not logged in, go to the Codeforces login page first."
+              />
+              <div style={{ display: "flex", gap: 10 }}>
+                <Button style={{ flex: 1 }} onClick={() => setConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  style={{ flex: 1.6 }}
+                  onClick={() => {
+                    window.location.href = cfLoginUrl;
                   }}
                 >
-                  {p.idx}
-                  {ok && <span style={{ marginLeft: 3, fontSize: 10 }}>✓</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  Login to CF
+                </Button>
+                <Button
+                  style={{ flex: 2, background: t.accent, borderColor: t.accent }}
+                  type="primary"
+                  onClick={() => submitCode(prob)}
+                >
+                  Submit
+                </Button>
+              </div>
+            </>
+          )}
+        </Modal>
 
-        <div
+        <header
           style={{
+            height: 52,
+            background: t.surface,
+            borderBottom: `1px solid ${t.border}`,
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            padding: "0 16px",
+            gap: 12,
             flexShrink: 0,
           }}
         >
@@ -983,526 +794,511 @@ export default function Contest({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              padding: "5px 12px",
-              borderRadius: 8,
-              border: `1px solid ${warn ? t.red + "55" : t.border}`,
-              background: warn ? t.redBg : t.bgSub,
+              gap: 10,
+              flex: 1,
+              minWidth: 0,
             }}
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={warn ? t.red : t.textMuted}
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span
-              style={{
-                fontFamily: fm,
-                fontSize: 13,
-                fontWeight: 600,
-                color: warn ? t.red : t.text,
-                letterSpacing: "0.06em",
-              }}
-            >
-              {timeLeft ||
-                (contest?.status === "scheduled" ? "Scheduled" : "--:--")}
-            </span>
-          </div>
-          <button
-            onClick={() => setDark((d) => !d)}
-            style={iconBtnStyle(t)}
-            title="Toggle theme"
-          >
-            {dark ? (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={t.textSub}
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            ) : (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={t.textSub}
-                strokeWidth="2"
-              >
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
+            {onExit && (
+              <Button
+                type="text"
+                shape="circle"
+                size="small"
+                icon={<CloseOutlined style={{ fontSize: 12, color: t.textSub }} />}
+                onClick={onExit}
+                style={{ border: `1px solid ${t.border}`, width: 32, height: 32 }}
+              />
             )}
-          </button>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              padding: "4px 10px 4px 4px",
-              borderRadius: 8,
-              border: `1px solid ${t.border}`,
-            }}
-          >
             <div
               style={{
-                width: 26,
-                height: 26,
-                borderRadius: 6,
-                background: t.accent,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                fontSize: 11,
-                fontWeight: 700,
-                color: "#fff",
-                fontFamily: ff,
+                gap: 8,
+                marginRight: 4,
+                flexShrink: 0,
               }}
             >
-              {me[0].toUpperCase()}
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: t.accent,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <ThunderboltOutlined style={{ color: "#fff", fontSize: 15 }} />
+              </div>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: t.text,
+                  fontFamily: ff,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                ContestPad
+              </span>
             </div>
+            <div
+              style={{
+                width: 1,
+                height: 20,
+                background: t.border,
+                flexShrink: 0,
+              }}
+            />
             <span
               style={{
                 fontSize: 12,
                 fontWeight: 500,
                 color: t.textSub,
                 fontFamily: ff,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: 220,
               }}
             >
-              {me}
+              {contest?.title ?? "—"}
             </span>
-          </div>
-        </div>
-      </header>
 
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div
-          style={{
-            width: leftW,
-            display: "flex",
-            flexDirection: "column",
-            borderRight: `1px solid ${t.border}`,
-            background: t.surface,
-            flexShrink: 0,
-            minWidth: 0,
-          }}
-        >
+            <div style={{ display: "flex", gap: 3, marginLeft: 4 }}>
+              {(contest?.problems ?? []).map((p, i) => {
+                const ps = subs[p.idx] || [];
+                const ok = isProblemSolved(p);
+                const tried = ps.length > 0 && !ok;
+                return (
+                  <Button
+                    key={p.idx}
+                    size="small"
+                    onClick={() => setProbIdx(i)}
+                    style={{
+                      height: 26,
+                      padding: "0 11px",
+                      borderRadius: 6,
+                      border: `1px solid ${probIdx === i ? t.accent : ok ? t.green + "44" : tried ? t.red + "33" : t.border}`,
+                      background:
+                        probIdx === i
+                          ? t.accentBg
+                          : ok
+                            ? t.greenBg
+                            : tried
+                              ? t.redBg
+                              : "transparent",
+                      color:
+                        probIdx === i
+                          ? t.accent
+                          : ok
+                            ? t.green
+                            : tried
+                              ? t.red
+                              : t.textSub,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      fontFamily: ff,
+                    }}
+                  >
+                    {p.idx}
+                    {ok && <CheckCircleFilled style={{ marginLeft: 3, fontSize: 10 }} />}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
           <div
             style={{
-              display: "flex",
-              borderBottom: `1px solid ${t.border}`,
-              flexShrink: 0,
-            }}
-          >
-            <button
-              style={tab(leftTab === "problem")}
-              onClick={() => setLeftTab("problem")}
-            >
-              Description
-            </button>
-            <button
-              style={tab(leftTab === "rankings")}
-              onClick={() => setLeftTab("rankings")}
-            >
-              Rankings
-            </button>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              scrollbarWidth: "thin",
-              scrollbarColor: `${t.scrollbar} transparent`,
-            }}
-          >
-            {leftTab === "problem" ? (
-              isLoading ? (
-                <LoadingSkeleton t={t} ff={ff} />
-              ) : prob ? (
-                <ProblemPane prob={prob} t={t} ff={ff} fm={fm} />
-              ) : (
-                <ErrorState t={t} ff={ff} message="No problem selected." />
-              )
-            ) : (
-              <RankingsPane
-                board={BOARD}
-                me={me}
-                probs={contest?.problems ?? []}
-                t={t}
-                ff={ff}
-                fm={fm}
-              />
-            )}
-          </div>
-        </div>
-
-        <DragHandle
-          onStart={() => {
-            dragging.current = "left";
-            document.body.style.cursor = "col-resize";
-          }}
-          t={t}
-        />
-
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minWidth: 0,
-            background: t.bg,
-          }}
-        >
-          <div
-            style={{
-              height: 44,
-              background: t.surface,
-              borderBottom: `1px solid ${t.border}`,
               display: "flex",
               alignItems: "center",
-              padding: "0 12px",
               gap: 8,
               flexShrink: 0,
             }}
           >
-            <select
-              value={lang.id}
-              onChange={(e) =>
-                setLang(LANGS.find((l) => l.id === e.target.value))
-              }
-              style={{
-                background: t.bgSub,
-                color: t.text,
-                border: `1px solid ${t.border}`,
-                borderRadius: 7,
-                padding: "5px 10px",
-                fontSize: 12,
-                fontFamily: ff,
-                cursor: "pointer",
-                outline: "none",
-                fontWeight: 500,
-              }}
-            >
-              {LANGS.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-            <div style={{ flex: 1 }} />
-            <label
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                cursor: "pointer",
-                fontSize: 12,
-                color: t.textSub,
-                fontFamily: ff,
-                userSelect: "none",
+                padding: "5px 12px",
+                borderRadius: 8,
+                border: `1px solid ${warn ? t.red + "55" : t.border}`,
+                background: warn ? t.redBg : t.bgSub,
               }}
             >
-              <input
-                type="checkbox"
-                checked={useCustom}
-                onChange={(e) => setUseCustom(e.target.checked)}
+              <ClockCircleOutlined style={{ fontSize: 12, color: warn ? t.red : t.textMuted }} />
+              <span
                 style={{
-                  accentColor: t.accent,
-                  cursor: "pointer",
-                  width: 13,
-                  height: 13,
+                  fontFamily: fm,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: warn ? t.red : t.text,
+                  letterSpacing: "0.06em",
                 }}
-              />
-              Custom input
-            </label>
-            <button
-              onClick={() => setCodes((p) => ({ ...p, [codeKey]: lang.tmpl }))}
+              >
+                {timeLeft ||
+                  (contest?.status === "scheduled" ? "Scheduled" : "--:--")}
+              </span>
+            </div>
+            <Button
+              type="text"
+              shape="circle"
+              onClick={() => setDark((d) => !d)}
+              title="Toggle theme"
+              style={{ border: `1px solid ${t.border}`, width: 32, height: 32 }}
+              icon={
+                dark ? (
+                  <BulbOutlined style={{ fontSize: 13, color: t.textSub }} />
+                ) : (
+                  <BulbFilled style={{ fontSize: 13, color: t.textSub }} />
+                )
+              }
+            />
+            <div
               style={{
-                ...iconBtnStyle(t),
-                width: "auto",
-                padding: "0 10px",
-                gap: 5,
-                fontSize: 12,
-                fontFamily: ff,
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "4px 10px 4px 4px",
+                borderRadius: 8,
+                border: `1px solid ${t.border}`,
               }}
             >
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+              <Avatar
+                size={26}
+                style={{
+                  background: t.accent,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: ff,
+                }}
               >
-                <polyline points="1 4 1 10 7 10" />
-                <path d="M3.51 15a9 9 0 1 0 .49-4.5" />
-              </svg>
-              Reset
-            </button>
+                {me[0].toUpperCase()}
+              </Avatar>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: t.textSub,
+                  fontFamily: ff,
+                }}
+              >
+                {me}
+              </span>
+            </div>
           </div>
+        </header>
+
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          <div
+            style={{
+              width: leftW,
+              display: "flex",
+              flexDirection: "column",
+              borderRight: `1px solid ${t.border}`,
+              background: t.surface,
+              flexShrink: 0,
+              minWidth: 0,
+            }}
+          >
+            <Tabs
+              activeKey={leftTab}
+              onChange={setLeftTab}
+              size="small"
+              tabBarStyle={{ margin: 0, padding: "0 12px", fontFamily: ff }}
+              items={[
+                { key: "problem", label: "Description" },
+                { key: "rankings", label: "Rankings" },
+              ]}
+            />
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                scrollbarWidth: "thin",
+                scrollbarColor: `${t.scrollbar} transparent`,
+              }}
+            >
+              {leftTab === "problem" ? (
+                isLoading ? (
+                  <LoadingSkeleton t={t} ff={ff} />
+                ) : prob ? (
+                  <ProblemPane prob={prob} t={t} ff={ff} fm={fm} />
+                ) : (
+                  <ErrorState t={t} ff={ff} message="No problem selected." />
+                )
+              ) : (
+                <RankingsPane
+                  board={BOARD}
+                  me={me}
+                  probs={contest?.problems ?? []}
+                  t={t}
+                  ff={ff}
+                  fm={fm}
+                />
+              )}
+            </div>
+          </div>
+
+          <DragHandle
+            onStart={() => {
+              dragging.current = "left";
+              document.body.style.cursor = "col-resize";
+            }}
+            t={t}
+          />
 
           <div
             style={{
               flex: 1,
               display: "flex",
               flexDirection: "column",
-              minHeight: 0,
+              minWidth: 0,
+              background: t.bg,
             }}
           >
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <Editor
-                height="100%"
-                theme={t.monacoTheme}
-                language={lang.monaco}
-                value={code}
-                onChange={onCodeChange}
-                options={{
-                  fontSize: 14,
-                  fontFamily: fm,
-                  minimap: { enabled: false },
-                  padding: { top: 16 },
-                  scrollBeyondLastLine: false,
-                  lineNumbers: "on",
-                  renderLineHighlight: "line",
-                  cursorBlinking: "smooth",
-                  smoothScrolling: true,
-                  tabSize: 4,
-                  wordWrap: "off",
-                }}
+            <div
+              style={{
+                height: 44,
+                background: t.surface,
+                borderBottom: `1px solid ${t.border}`,
+                display: "flex",
+                alignItems: "center",
+                padding: "0 12px",
+                gap: 8,
+                flexShrink: 0,
+              }}
+            >
+              <Select
+                value={lang.id}
+                onChange={(id) => setLang(LANGS.find((l) => l.id === id))}
+                size="small"
+                style={{ width: 130, fontFamily: ff }}
+                options={LANGS.map((l) => ({ value: l.id, label: l.label }))}
               />
-            </div>
-            {useCustom && (
-              <div
-                style={{
-                  height: 144,
-                  borderTop: `1px solid ${t.border}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  flexShrink: 0,
-                }}
+              <div style={{ flex: 1 }} />
+              <Checkbox
+                checked={useCustom}
+                onChange={(e) => setUseCustom(e.target.checked)}
+                style={{ fontSize: 12, color: t.textSub, fontFamily: ff }}
               >
-                <div
-                  style={{
-                    padding: "6px 14px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    color: t.textMuted,
-                    borderBottom: `1px solid ${t.border}`,
-                    background: t.surface,
-                    fontFamily: ff,
-                  }}
-                >
-                  Custom Input (stdin)
-                </div>
-                <textarea
-                  value={customIn}
-                  onChange={(e) => setCustomIn(e.target.value)}
-                  placeholder="Paste your test input here…"
-                  spellCheck={false}
-                  style={{
-                    flex: 1,
-                    background: t.codeBg,
-                    color: t.text,
-                    border: "none",
-                    outline: "none",
-                    padding: "12px 14px",
+                Custom input
+              </Checkbox>
+              <Button
+                size="small"
+                icon={<ReloadOutlined style={{ fontSize: 11 }} />}
+                onClick={() => setCodes((p) => ({ ...p, [codeKey]: lang.tmpl }))}
+                style={{ fontSize: 12, fontFamily: ff, border: `1px solid ${t.border}` }}
+              >
+                Reset
+              </Button>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+              }}
+            >
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <Editor
+                  height="100%"
+                  theme={t.monacoTheme}
+                  language={lang.monaco}
+                  value={code}
+                  onChange={onCodeChange}
+                  options={{
+                    fontSize: 14,
                     fontFamily: fm,
-                    fontSize: 13,
-                    resize: "none",
-                    lineHeight: 1.65,
-                    scrollbarWidth: "thin",
-                    scrollbarColor: `${t.scrollbar} transparent`,
+                    minimap: { enabled: false },
+                    padding: { top: 16 },
+                    scrollBeyondLastLine: false,
+                    lineNumbers: "on",
+                    renderLineHighlight: "line",
+                    cursorBlinking: "smooth",
+                    smoothScrolling: true,
+                    tabSize: 4,
+                    wordWrap: "off",
                   }}
                 />
               </div>
-            )}
+              {useCustom && (
+                <div
+                  style={{
+                    height: 144,
+                    borderTop: `1px solid ${t.border}`,
+                    display: "flex",
+                    flexDirection: "column",
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "6px 14px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.07em",
+                      color: t.textMuted,
+                      borderBottom: `1px solid ${t.border}`,
+                      background: t.surface,
+                      fontFamily: ff,
+                    }}
+                  >
+                    Custom Input (stdin)
+                  </div>
+                  <textarea
+                    value={customIn}
+                    onChange={(e) => setCustomIn(e.target.value)}
+                    placeholder="Paste your test input here…"
+                    spellCheck={false}
+                    style={{
+                      flex: 1,
+                      background: t.codeBg,
+                      color: t.text,
+                      border: "none",
+                      outline: "none",
+                      padding: "12px 14px",
+                      fontFamily: fm,
+                      fontSize: 13,
+                      resize: "none",
+                      lineHeight: 1.65,
+                      scrollbarWidth: "thin",
+                      scrollbarColor: `${t.scrollbar} transparent`,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div
+              style={{
+                padding: "10px 12px",
+                borderTop: `1px solid ${t.border}`,
+                display: "flex",
+                gap: 8,
+                background: t.surface,
+                flexShrink: 0,
+              }}
+            >
+              <Button
+                onClick={runCode}
+                disabled={running || submitting || !prob}
+                loading={running}
+                icon={!running ? <PlayCircleOutlined /> : undefined}
+                style={{
+                  flex: 1,
+                  height: 38,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  fontFamily: ff,
+                  border: `1px solid ${t.border}`,
+                }}
+              >
+                {running ? "Running…" : "Run Code"}
+              </Button>
+              <Button
+                type="primary"
+                onClick={() => setConfirm(true)}
+                disabled={running || submitting || !prob}
+                loading={submitting}
+                icon={!submitting ? <SendOutlined /> : undefined}
+                style={{
+                  flex: 2,
+                  height: 38,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  fontFamily: ff,
+                  background: solved ? t.green : t.accent,
+                  borderColor: solved ? t.green : t.accent,
+                }}
+              >
+                {submitting ? "Judging…" : solved ? "Resubmit" : "Submit"}
+              </Button>
+            </div>
           </div>
+
+          <DragHandle
+            onStart={() => {
+              dragging.current = "right";
+              document.body.style.cursor = "col-resize";
+            }}
+            t={t}
+          />
 
           <div
             style={{
-              padding: "10px 12px",
-              borderTop: `1px solid ${t.border}`,
+              width: rightW,
               display: "flex",
-              gap: 8,
+              flexDirection: "column",
               background: t.surface,
+              borderLeft: `1px solid ${t.border}`,
               flexShrink: 0,
+              minWidth: 0,
             }}
           >
-            <button
-              onClick={runCode}
-              disabled={running || submitting || !prob}
-              onMouseEnter={(e) => {
-                if (!running && !submitting)
-                  e.currentTarget.style.background = t.bgHover;
-              }}
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
+            <Tabs
+              activeKey={rightTab}
+              onChange={setRightTab}
+              size="small"
+              tabBarStyle={{ margin: 0, padding: "0 12px", fontFamily: ff }}
+              items={[
+                { key: "testcase", label: "Testcase" },
+                { key: "result", label: "Result" },
+                {
+                  key: "submissions",
+                  label: (
+                    <span>
+                      Submissions{" "}
+                      {probSubs.length > 0 && (
+                        <Badge
+                          count={probSubs.length}
+                          size="small"
+                          color={t.accent}
+                          style={{ marginLeft: 2 }}
+                        />
+                      )}
+                    </span>
+                  ),
+                },
+              ]}
+            />
+            <div
               style={{
                 flex: 1,
-                height: 38,
-                borderRadius: 8,
-                border: `1px solid ${t.border}`,
-                background: "transparent",
-                color: running ? t.textMuted : t.text,
-                fontWeight: 600,
-                fontSize: 13,
-                cursor:
-                  running || submitting || !prob ? "not-allowed" : "pointer",
-                fontFamily: ff,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                transition: "all .15s",
+                overflowY: "auto",
+                scrollbarWidth: "thin",
+                scrollbarColor: `${t.scrollbar} transparent`,
               }}
             >
-              {running ? (
-                <>
-                  <Spin c={t.textMuted} /> Running…
-                </>
-              ) : (
-                <>
-                  <PlayIcon /> Run Code
-                </>
+              {rightTab === "testcase" &&
+                (prob ? (
+                  <TestcasePane prob={prob} t={t} ff={ff} fm={fm} />
+                ) : (
+                  <ErrorState t={t} ff={ff} message="No test cases available." />
+                ))}
+              {rightTab === "result" && (
+                <ResultPane
+                  res={runRes}
+                  running={running}
+                  t={t}
+                  ff={ff}
+                  fm={fm}
+                />
               )}
-            </button>
-            <button
-              onClick={() => setConfirm(true)}
-              disabled={running || submitting || !prob}
-              onMouseEnter={(e) => {
-                if (!running && !submitting)
-                  e.currentTarget.style.filter = "brightness(1.1)";
-              }}
-              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-              style={{
-                flex: 2,
-                height: 38,
-                borderRadius: 8,
-                border: "none",
-                background: solved ? t.green : t.accent,
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 13,
-                cursor:
-                  running || submitting || !prob ? "not-allowed" : "pointer",
-                fontFamily: ff,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                transition: "all .15s",
-                opacity: running || submitting ? 0.65 : 1,
-              }}
-            >
-              {submitting ? (
-                <>
-                  <Spin c="#fff" /> Judging…
-                </>
-              ) : (
-                <>
-                  <SendIcon />
-                  {solved ? "Resubmit" : "Submit"}
-                </>
+              {rightTab === "submissions" && (
+                <SubsPane subs={probSubs} t={t} ff={ff} fm={fm} />
               )}
-            </button>
-          </div>
-        </div>
-
-        <DragHandle
-          onStart={() => {
-            dragging.current = "right";
-            document.body.style.cursor = "col-resize";
-          }}
-          t={t}
-        />
-
-        <div
-          style={{
-            width: rightW,
-            display: "flex",
-            flexDirection: "column",
-            background: t.surface,
-            borderLeft: `1px solid ${t.border}`,
-            flexShrink: 0,
-            minWidth: 0,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              borderBottom: `1px solid ${t.border}`,
-              flexShrink: 0,
-            }}
-          >
-            <button
-              style={tab(rightTab === "testcase")}
-              onClick={() => setRightTab("testcase")}
-            >
-              Testcase
-            </button>
-            <button
-              style={tab(rightTab === "result")}
-              onClick={() => setRightTab("result")}
-            >
-              Result
-            </button>
-            <button
-              style={tab(rightTab === "submissions")}
-              onClick={() => setRightTab("submissions")}
-            >
-              {`Submissions${probSubs.length ? ` (${probSubs.length})` : ""}`}
-            </button>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              scrollbarWidth: "thin",
-              scrollbarColor: `${t.scrollbar} transparent`,
-            }}
-          >
-            {rightTab === "testcase" &&
-              (prob ? (
-                <TestcasePane prob={prob} t={t} ff={ff} fm={fm} />
-              ) : (
-                <ErrorState t={t} ff={ff} message="No test cases available." />
-              ))}
-            {rightTab === "result" && (
-              <ResultPane
-                res={runRes}
-                running={running}
-                t={t}
-                ff={ff}
-                fm={fm}
-              />
-            )}
-            {rightTab === "submissions" && (
-              <SubsPane subs={probSubs} t={t} ff={ff} fm={fm} />
-            )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ConfigProvider>
   );
 }
 
@@ -1530,18 +1326,12 @@ function ProblemPane({ prob, t, ff, fm }) {
   const rc = ratingStyle(prob.rating, t);
   return (
     <div style={{ padding: "24px 24px 40px", fontFamily: ff }}>
-      <h2
-        style={{
-          fontSize: 20,
-          fontWeight: 700,
-          color: t.text,
-          margin: "0 0 12px",
-          lineHeight: 1.3,
-          letterSpacing: "-0.02em",
-        }}
+      <Typography.Title
+        level={4}
+        style={{ color: t.text, margin: "0 0 12px", letterSpacing: "-0.02em" }}
       >
         {prob.idx}. {prob.name}
-      </h2>
+      </Typography.Title>
 
       <div
         style={{
@@ -1552,21 +1342,12 @@ function ProblemPane({ prob, t, ff, fm }) {
           marginBottom: 16,
         }}
       >
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: rc.text,
-            background: rc.bg,
-            padding: "3px 10px",
-            borderRadius: 20,
-          }}
-        >
+        <Tag color={rc.text} style={{ background: rc.bg, borderColor: "transparent", borderRadius: 20, fontWeight: 600 }}>
           {rc.label}
-        </span>
+        </Tag>
         <span style={{ color: t.border }}>|</span>
         <span style={{ fontSize: 12, color: t.textMuted, fontFamily: fm }}>
-          ★ {prob.rating}
+          <StarFilled style={{ marginRight: 3 }} /> {prob.rating}
         </span>
         <span style={{ color: t.border }}>|</span>
         <span style={{ fontSize: 12, color: t.textMuted }}>
@@ -1584,7 +1365,8 @@ function ProblemPane({ prob, t, ff, fm }) {
               rel="noopener noreferrer"
               style={{ fontSize: 12, color: t.blue, textDecoration: "none" }}
             >
-              View on CF ↗
+              <LinkOutlined style={{ marginRight: 3 }} />
+              View on CF
             </a>
           </>
         )}
@@ -1594,22 +1376,23 @@ function ProblemPane({ prob, t, ff, fm }) {
         style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 24 }}
       >
         {prob.tags.map((tag) => (
-          <span
+          <Tag
             key={tag}
             style={{
               fontSize: 11,
               fontWeight: 500,
               color: t.tagText,
               background: t.tagBg,
-              padding: "3px 10px",
+              border: "none",
               borderRadius: 20,
             }}
           >
             {tag}
-          </span>
+          </Tag>
         ))}
       </div>
 
+      {/* Problem statement rendering below is intentionally left untouched */}
       {prob.body && (
         <ProbSect title="Problem Statement" t={t} ff={ff}>
           <div
@@ -1661,7 +1444,7 @@ function ProblemPane({ prob, t, ff, fm }) {
           <p
             style={{
               fontSize: 14,
-              color: t.textSub,
+              color: t.text,
               margin: 0,
               whiteSpace: "pre-line",
               lineHeight: 1.85,
@@ -1671,6 +1454,7 @@ function ProblemPane({ prob, t, ff, fm }) {
           </p>
         </ProbSect>
       )}
+      {/* end untouched statement rendering */}
 
       {prob.cases.length > 0 && (
         <div style={{ marginBottom: 0 }}>
@@ -1712,28 +1496,28 @@ function ProblemPane({ prob, t, ff, fm }) {
                   ["Input", c.i],
                   ["Output", c.o],
                 ].map(([label, val]) => (
-                  <div
+                  <Card
                     key={label}
-                    style={{
-                      borderRadius: 9,
-                      border: `1px solid ${t.border}`,
-                      overflow: "hidden",
+                    size="small"
+                    title={
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.07em",
+                          color: t.textMuted,
+                        }}
+                      >
+                        {label}
+                      </span>
+                    }
+                    styles={{
+                      header: { minHeight: 30, padding: "0 12px", background: t.bgSub, borderColor: t.border },
+                      body: { padding: 0 },
                     }}
+                    style={{ borderColor: t.border, borderRadius: 9, overflow: "hidden" }}
                   >
-                    <div
-                      style={{
-                        padding: "6px 12px",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                        color: t.textMuted,
-                        background: t.bgSub,
-                        borderBottom: `1px solid ${t.border}`,
-                      }}
-                    >
-                      {label}
-                    </div>
                     <pre
                       style={{
                         margin: 0,
@@ -1751,7 +1535,7 @@ function ProblemPane({ prob, t, ff, fm }) {
                     >
                       {val}
                     </pre>
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -1784,150 +1568,97 @@ function ProbSect({ title, children, t, ff }) {
 }
 
 function RankingsPane({ board, me, probs, t, ff, fm }) {
+  const rankColors = [t.yellow, t.textSub, t.red];
+  const columns = [
+    {
+      title: "#",
+      key: "rank",
+      width: 50,
+      align: "center",
+      render: (_, __, i) => {
+        const color = rankColors[i] ?? t.textMuted;
+        return (
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 25, height: 25, borderRadius: 6, background: i < 3 ? color + "16" : "transparent", color, fontFamily: fm, fontSize: 12, fontWeight: 700 }}>
+            {i + 1}
+          </span>
+        );
+      },
+    },
+    {
+      title: "Handle",
+      dataIndex: "h",
+      key: "handle",
+      render: (h, row) => (
+        <div style={{ lineHeight: 1.35 }}>
+          <div
+            style={{
+              fontWeight: row.h === me ? 700 : 500,
+              color: row.h === me ? t.accent : t.text,
+            }}
+          >
+            {h}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted }}>{row.h === me ? "You" : row.f}</div>
+        </div>
+      ),
+    },
+    ...probs.map((p) => ({
+      title: p.idx,
+      key: p.idx,
+      align: "center",
+      render: (_, row) =>
+        row.ac[p.idx] ? (
+          <Tag
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: t.green,
+              background: t.greenBg,
+              border: "none",
+              fontFamily: fm,
+            }}
+          >
+            +{row.ac[p.idx]}
+          </Tag>
+        ) : (
+          <span style={{ color: t.textMuted, fontSize: 13 }}>—</span>
+        ),
+    })),
+    {
+      title: "Solved",
+      dataIndex: "s",
+      key: "solved",
+      align: "center",
+      render: (s) => (
+        <span style={{ fontWeight: 700, fontFamily: fm, color: s > 0 ? t.text : t.textMuted }}>
+          {s}
+        </span>
+      ),
+    },
+    {
+      title: "Penalty",
+      dataIndex: "p",
+      key: "penalty",
+      align: "center",
+      render: (p) => (
+        <span style={{ color: t.textSub, fontFamily: fm }}>{p || "—"}</span>
+      ),
+    },
+  ];
+
   return (
-    <div style={{ padding: 16, fontFamily: ff }}>
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.07em",
-          color: t.textMuted,
-          marginBottom: 14,
-        }}
-      >
-        Live Standings
+    <div style={{ padding: "18px 16px", fontFamily: ff }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: t.text, letterSpacing: "-0.01em" }}>Standings</div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 3 }}>Ranked by solved problems, then penalty</div>
+        </div>
+        <div style={{ fontSize: 11, color: t.textMuted, whiteSpace: "nowrap", paddingTop: 3 }}>{board.length} participants</div>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table
-          style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
-        >
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${t.border}` }}>
-              {[
-                "#",
-                "Handle",
-                ...probs.map((p) => p.idx),
-                "Solved",
-                "Penalty",
-              ].map((h, i) => (
-                <th
-                  key={i}
-                  style={{
-                    padding: "7px 10px",
-                    fontWeight: 600,
-                    color: t.textMuted,
-                    textAlign:
-                      i === 0 || i > 1 + probs.length
-                        ? "center"
-                        : i === 1
-                          ? "left"
-                          : "center",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {board.map((row, i) => {
-              const isMe = row.h === me;
-              const medal = ["🥇", "🥈", "🥉"][i];
-              return (
-                <tr
-                  key={row.h}
-                  style={{
-                    borderBottom: `1px solid ${t.borderFaint}`,
-                    background: isMe ? t.accentBg : "transparent",
-                    transition: "background .15s",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isMe) e.currentTarget.style.background = t.bgHover;
-                  }}
-                  onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = isMe
-                    ? t.accentBg
-                    : "transparent")
-                  }
-                >
-                  <td
-                    style={{
-                      padding: "10px",
-                      textAlign: "center",
-                      fontFamily: fm,
-                      fontSize: 13,
-                    }}
-                  >
-                    {medal || (
-                      <span style={{ color: t.textMuted }}>{i + 1}</span>
-                    )}
-                  </td>
-                  <td style={{ padding: "10px" }}>
-                    <div
-                      style={{
-                        fontWeight: isMe ? 700 : 500,
-                        color: isMe ? t.accent : t.text,
-                      }}
-                    >
-                      {row.h}
-                    </div>
-                    <div style={{ fontSize: 11, color: t.textMuted }}>
-                      {row.f}
-                    </div>
-                  </td>
-                  {probs.map((p) => (
-                    <td
-                      key={p.idx}
-                      style={{ padding: "10px", textAlign: "center" }}
-                    >
-                      {row.ac[p.idx] ? (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: t.green,
-                            background: t.greenBg,
-                            padding: "2px 7px",
-                            borderRadius: 4,
-                            fontFamily: fm,
-                          }}
-                        >
-                          +{row.ac[p.idx]}
-                        </span>
-                      ) : (
-                        <span style={{ color: t.textMuted }}>—</span>
-                      )}
-                    </td>
-                  ))}
-                  <td
-                    style={{
-                      padding: "10px",
-                      textAlign: "center",
-                      fontWeight: 700,
-                      fontFamily: fm,
-                      color: row.s > 0 ? t.text : t.textMuted,
-                    }}
-                  >
-                    {row.s}
-                  </td>
-                  <td
-                    style={{
-                      padding: "10px",
-                      textAlign: "center",
-                      color: t.textSub,
-                      fontFamily: fm,
-                    }}
-                  >
-                    {row.p || "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div style={{ border: `1px solid ${t.border}`, borderRadius: 10, overflow: "hidden", background: t.surface }}>
+        <Table size="small" rowKey="h" columns={columns} dataSource={board} pagination={false} scroll={{ x: true }} rowClassName={(row) => (row.h === me ? "contest-row-me" : "")} onRow={() => ({ style: { fontSize: 12, height: 52 } })} />
       </div>
+      <style>{`.contest-row-me > td { background: ${t.accentBg} !important; } .contest-row-me > td:first-child { box-shadow: inset 2px 0 0 ${t.accent}; }`}</style>
     </div>
   );
 }
@@ -1936,52 +1667,20 @@ function TestcasePane({ prob, t, ff, fm }) {
   const [active, setActive] = useState(0);
   if (!prob.cases.length) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-          padding: 52,
-          color: t.textMuted,
-          fontFamily: ff,
-          textAlign: "center",
-        }}
-      >
-        <span style={{ fontSize: 13 }}>
-          No test cases available for this problem.
-        </span>
+      <div style={{ padding: 40, fontFamily: ff }}>
+        <Empty description={<span style={{ color: t.textMuted, fontSize: 13 }}>No test cases available for this problem.</span>} />
       </div>
     );
   }
   const c = prob.cases[Math.min(active, prob.cases.length - 1)];
   return (
     <div style={{ padding: 16, fontFamily: ff }}>
-      <div
-        style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}
-      >
-        {prob.cases.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setActive(i)}
-            style={{
-              padding: "5px 13px",
-              borderRadius: 7,
-              border: `1px solid ${active === i ? t.accent : t.border}`,
-              background: active === i ? t.accentBg : "transparent",
-              color: active === i ? t.accent : t.textSub,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: ff,
-              transition: "all .12s",
-            }}
-          >
-            Case {i + 1}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={active}
+        onChange={setActive}
+        options={prob.cases.map((_, i) => ({ label: `Case ${i + 1}`, value: i }))}
+        style={{ marginBottom: 16 }}
+      />
       {[
         ["Input", c.i],
         ["Expected Output", c.o],
@@ -2039,58 +1738,36 @@ function ResultPane({ res, running, t, ff, fm }) {
           fontFamily: ff,
         }}
       >
-        <Spin c={t.accent} sz={28} />
+        <Spin size="large" />
         <span style={{ fontSize: 13 }}>Running your code…</span>
       </div>
     );
   if (!res)
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-          padding: 52,
-          color: t.textMuted,
-          fontFamily: ff,
-          textAlign: "center",
-        }}
-      >
-        <svg
-          width="40"
-          height="40"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.2"
-        >
-          <polygon points="5 3 19 12 5 21 5 3" />
-        </svg>
-        <span style={{ fontSize: 13 }}>Run your code to see results here</span>
+      <div style={{ padding: 40, fontFamily: ff }}>
+        <Empty
+          image={<PlayCircleOutlined style={{ fontSize: 40, color: t.textMuted }} />}
+          description={<span style={{ color: t.textMuted, fontSize: 13 }}>Run your code to see results here</span>}
+        />
       </div>
     );
   if (res.type === "custom")
     return (
       <div style={{ padding: 16, fontFamily: ff }}>
         {res.verdict ? (
-          <div
+          <Tag
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
               color: verdictInfo(res.verdict, t).c,
               background: verdictInfo(res.verdict, t).bg,
-              borderRadius: 6,
-              padding: "5px 9px",
+              border: "none",
               fontSize: 12,
               fontWeight: 700,
               marginBottom: 12,
+              padding: "3px 9px",
             }}
           >
             {res.verdict}
-          </div>
+          </Tag>
         ) : null}
         <div
           style={{
@@ -2201,403 +1878,213 @@ function ResultPane({ res, running, t, ff, fm }) {
   const allOk = passed === total;
   return (
     <div style={{ padding: 16, fontFamily: ff }}>
-      <div
+      <Alert
+        showIcon
+        type={allOk ? "success" : "error"}
+        icon={
+          allOk ? (
+            <CheckCircleFilled style={{ color: t.green }} />
+          ) : (
+            <CloseCircleFilled style={{ color: t.red }} />
+          )
+        }
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "14px 16px",
-          borderRadius: 10,
+          marginBottom: 16,
           background: allOk ? t.greenBg : t.redBg,
           border: `1px solid ${allOk ? t.green + "44" : t.red + "44"}`,
-          marginBottom: 16,
         }}
-      >
-        {allOk ? (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={t.green}
-            strokeWidth="2.5"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        ) : (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={t.red}
-            strokeWidth="2.5"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        )}
-        <div>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 14,
-              color: allOk ? t.green : t.red,
-            }}
-          >
+        message={
+          <div style={{ fontWeight: 700, fontSize: 14, color: allOk ? t.green : t.red }}>
             {allOk ? "All testcases passed" : "Some testcases failed"}
           </div>
+        }
+        description={
           <div style={{ fontSize: 12, color: t.textSub, marginTop: 2 }}>
             {passed} / {total} passed
           </div>
-        </div>
-      </div>
+        }
+      />
       {res.cases.map((c) => (
-        <div
+        <Card
           key={c.i}
+          size="small"
           style={{
             marginBottom: 10,
             borderRadius: 10,
-            border: `1px solid ${c.pass ? t.green + "33" : t.red + "33"}`,
+            borderColor: c.pass ? t.green + "33" : t.red + "33",
             overflow: "hidden",
           }}
-        >
-          <div
-            style={{
-              padding: "9px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
+          styles={{
+            header: {
               background: c.pass ? t.greenBg : t.redBg,
-            }}
-          >
-            {c.pass ? (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={t.green}
-                strokeWidth="2.5"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={t.red}
-                strokeWidth="2.5"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            )}
-            <span
-              style={{
-                fontWeight: 700,
-                fontSize: 13,
-                color: c.pass ? t.green : t.red,
-              }}
-            >
-              Testcase {c.i}
-            </span>
-            <span
-              style={{
-                marginLeft: "auto",
-                fontSize: 11,
-                color: t.textMuted,
-                fontFamily: fm,
-              }}
-            >
+              minHeight: 38,
+            },
+            body: { padding: "12px 14px" },
+          }}
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {c.pass ? (
+                <CheckCircleFilled style={{ color: t.green, fontSize: 14 }} />
+              ) : (
+                <CloseCircleFilled style={{ color: t.red, fontSize: 14 }} />
+              )}
+              <span style={{ fontWeight: 700, fontSize: 13, color: c.pass ? t.green : t.red }}>
+                Testcase {c.i}
+              </span>
+            </div>
+          }
+          extra={
+            <span style={{ fontSize: 11, color: t.textMuted, fontFamily: fm }}>
               {c.ms} ms
             </span>
-          </div>
-          {!c.pass && (
-            <div style={{ padding: "12px 14px", display: "grid", gap: 10 }}>
-              {[
-                ["Input", c.input],
-                ["Expected", c.expected],
-                ["Verdict", c.verdict],
-                ["Got", c.got],
-              ].map(([lbl, val]) => (
-                <div key={lbl}>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                      color: t.textMuted,
-                      marginBottom: 5,
-                    }}
-                  >
-                    {lbl}
-                  </div>
-                  <pre
-                    style={{
-                      margin: 0,
-                      fontSize: 12,
-                      color: t.text,
-                      fontFamily: fm,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {val}
-                  </pre>
+          }
+        >
+          <div style={{ display: "grid", gap: 10 }}>
+            {[
+              ["Input", c.input],
+              ["Expected Output", c.expected],
+              ["Got Output", c.got],
+              ["Verdict", c.verdict],
+            ].map(([lbl, val]) => (
+              <div key={lbl}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em",
+                    color: t.textMuted,
+                    marginBottom: 5,
+                  }}
+                >
+                  {lbl}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: t.text,
+                    fontFamily: fm,
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {val}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </Card>
       ))}
     </div>
   );
 }
 
 function SubsPane({ subs, t, ff, fm }) {
-  const [open, setOpen] = useState(null);
   if (!subs.length)
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-          padding: 52,
-          color: t.textMuted,
-          fontFamily: ff,
-          textAlign: "center",
-        }}
-      >
-        <svg
-          width="40"
-          height="40"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.2"
-        >
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
-        </svg>
-        <span style={{ fontSize: 13 }}>
-          No submissions yet for this problem
-        </span>
+      <div style={{ padding: 40, fontFamily: ff }}>
+        <Empty
+          image={<FileTextOutlined style={{ fontSize: 40, color: t.textMuted }} />}
+          description={<span style={{ color: t.textMuted, fontSize: 13 }}>No submissions yet for this problem</span>}
+        />
       </div>
     );
-  return (
-    <div
-      style={{
-        padding: 12,
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        fontFamily: ff,
-      }}
-    >
-      {subs.map((s) => {
-        const vi = verdictInfo(s.verdict, t);
-        const isOpen = open === s.id;
-        const isPending = s.verdict === "Pending" || s.verdict === "TESTING";
-        return (
-          <div
-            key={s.id}
+
+  const items = subs.map((s) => {
+    const vi = verdictInfo(s.verdict, t);
+    const isPending = s.verdict === "Pending" || s.verdict === "TESTING";
+    return {
+      key: s.id,
+      collapsible: isPending ? "disabled" : undefined,
+      showArrow: !isPending,
+      style: {
+        borderRadius: 10,
+        border: `1px solid ${s.verdict === "Accepted" ? t.green + "44" : t.border}`,
+        marginBottom: 6,
+        overflow: "hidden",
+        background: s.verdict === "Accepted" ? t.greenBg : t.bgSub,
+      },
+      label: (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
             style={{
-              borderRadius: 10,
-              border: `1px solid ${s.verdict === "Accepted" ? t.green + "44" : t.border}`,
-              overflow: "hidden",
+              fontSize: 11,
+              fontWeight: 700,
+              color: vi.c,
+              background: vi.bg,
+              padding: "3px 8px",
+              borderRadius: 5,
+              fontFamily: fm,
+              minWidth: 32,
+              textAlign: "center",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
             }}
           >
+            {isPending && <Spin size="small" />}
+            {vi.short}
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
-              onClick={() => !isPending && setOpen(isOpen ? null : s.id)}
               style={{
-                padding: "11px 14px",
-                cursor: isPending ? "default" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                background: s.verdict === "Accepted" ? t.greenBg : t.bgSub,
-                transition: "background .12s",
+                fontSize: 12,
+                fontWeight: 600,
+                color: isPending ? t.textMuted : vi.c,
               }}
-              onMouseEnter={(e) => {
-                if (!isPending && s.verdict !== "Accepted")
-                  e.currentTarget.style.background = t.bgHover;
-              }}
-              onMouseLeave={(e) =>
-              (e.currentTarget.style.background =
-                s.verdict === "Accepted" ? t.greenBg : t.bgSub)
-              }
             >
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: vi.c,
-                  background: vi.bg,
-                  padding: "3px 8px",
-                  borderRadius: 5,
-                  fontFamily: fm,
-                  minWidth: 32,
-                  textAlign: "center",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                {isPending && <Spin c={vi.c} sz={10} />}
-                {vi.short}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: isPending ? t.textMuted : vi.c,
-                  }}
-                >
-                  {s.verdict}
-                </div>
-                <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
-                  {s.lang} · {s.time} · {s.mem}
-                </div>
-              </div>
-              <span
-                style={{
-                  fontSize: 11,
-                  color: t.textMuted,
-                  fontFamily: fm,
-                  flexShrink: 0,
-                }}
-              >
-                {s.at}
-              </span>
-              {!isPending && (
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={t.textMuted}
-                  strokeWidth="2"
-                  style={{
-                    transform: isOpen ? "rotate(180deg)" : "none",
-                    transition: "transform .2s",
-                    flexShrink: 0,
-                  }}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              )}
+              {s.verdict}
             </div>
-            {isOpen && !isPending && (
-              <div style={{ borderTop: `1px solid ${t.border}` }}>
-                <div
-                  style={{
-                    padding: "6px 14px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    color: t.textMuted,
-                    borderBottom: `1px solid ${t.border}`,
-                    background: t.surface,
-                  }}
-                >
-                  Submitted Code
-                </div>
-                <pre
-                  style={{
-                    margin: 0,
-                    padding: "14px",
-                    fontSize: 12,
-                    color: t.text,
-                    fontFamily: fm,
-                    background: t.codeBg,
-                    maxHeight: 280,
-                    overflowY: "auto",
-                    overflowX: "auto",
-                    lineHeight: 1.65,
-                    scrollbarWidth: "thin",
-                    scrollbarColor: `${t.scrollbar} transparent`,
-                  }}
-                >
-                  {s.code}
-                </pre>
-              </div>
-            )}
+            <div style={{ fontSize: 11, color: t.textMuted, marginTop: 2 }}>
+              {s.lang} · {s.time} · {s.mem}
+            </div>
           </div>
-        );
-      })}
+          <span
+            style={{
+              fontSize: 11,
+              color: t.textMuted,
+              fontFamily: fm,
+              flexShrink: 0,
+              marginRight: 8,
+            }}
+          >
+            {s.at}
+          </span>
+        </div>
+      ),
+      children: !isPending && (
+        <pre
+          style={{
+            margin: 0,
+            padding: "14px",
+            fontSize: 12,
+            color: t.text,
+            fontFamily: fm,
+            background: t.codeBg,
+            maxHeight: 280,
+            overflowY: "auto",
+            overflowX: "auto",
+            lineHeight: 1.65,
+            scrollbarWidth: "thin",
+            scrollbarColor: `${t.scrollbar} transparent`,
+          }}
+        >
+          {s.code}
+        </pre>
+      ),
+    };
+  });
+
+  return (
+    <div style={{ padding: 12, fontFamily: ff }}>
+      <Collapse
+        bordered={false}
+        ghost={false}
+        items={items}
+        style={{ background: "transparent", display: "flex", flexDirection: "column", gap: 6 }}
+      />
     </div>
   );
-}
-
-function Spin({ c = "#ffa116", sz = 16 }) {
-  return (
-    <svg
-      width={sz}
-      height={sz}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={c}
-      strokeWidth="2.5"
-      style={{ animation: "_spin .75s linear infinite", flexShrink: 0 }}
-    >
-      <style>{`@keyframes _spin{to{transform:rotate(360deg)}}`}</style>
-      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-    </svg>
-  );
-}
-function PlayIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polygon points="5 3 19 12 5 21 5 3" />
-    </svg>
-  );
-}
-function SendIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
-  );
-}
-function iconBtnStyle(t) {
-  return {
-    background: "transparent",
-    border: `1px solid ${t.border}`,
-    cursor: "pointer",
-    color: t.textSub,
-    width: 32,
-    height: 32,
-    borderRadius: 7,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    transition: "all .15s",
-  };
 }
