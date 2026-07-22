@@ -6,7 +6,13 @@ export const isFinalCodeforcesVerdict = (verdict) => {
   return !pending.includes(verdict.toUpperCase());
 };
 
-export const fetchSubmissionStatus = async ({ cfContestId, cfHandle }) => {
+export const fetchSubmissionStatus = async ({
+  cfContestId,
+  cfHandle,
+  cfSubmissionId,
+  problemIndex,
+  requestedAt,
+}) => {
   if (!cfContestId || !cfHandle) {
     throw new Error("Missing contest id or Codeforces handle.");
   }
@@ -25,12 +31,20 @@ export const fetchSubmissionStatus = async ({ cfContestId, cfHandle }) => {
     throw new Error(`Codeforces API error: ${json.comment || json.status}`);
   }
 
-  const targetSubmission = json.result.find((submission) => submission.id === cfSubmissionId);
+  const targetSubmission = cfSubmissionId
+    ? json.result.find((submission) => submission.id === cfSubmissionId)
+    : json.result.find(
+        (submission) =>
+          submission.problem?.index === problemIndex &&
+          (!requestedAt ||
+            submission.creationTimeSeconds * 1000 >= requestedAt - 1000),
+      );
   if (!targetSubmission) {
-    throw new Error(`Submission ${cfSubmissionId} not found for handle ${cfHandle}.`);
+    return null;
   }
 
   return {
+    cfSubmissionId: targetSubmission.id,
     cfContestId: targetSubmission.contestId,
     problemIndex: targetSubmission.problem.index,
     verdict: targetSubmission.verdict || "TESTING",

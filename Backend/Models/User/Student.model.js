@@ -14,7 +14,6 @@ const studentSchema = new mongoose.Schema({
     },
     CF_Handle:{
         type:String,
-        default:null
     }
 },{timestamps:true})
 export const studentModel = mongoose.model('studentModel',studentSchema);

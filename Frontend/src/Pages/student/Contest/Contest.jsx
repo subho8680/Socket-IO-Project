@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Editor from "@monaco-editor/react";
-import { executeCode, usegetContestById } from "../../../Services/ContestAPI";
+import {
+  createSubmission,
+  executeCode,
+  usegetContestById,
+  useGetSolvedProblems,
+  useUserSubmissions,
+} from "../../../Services/ContestAPI";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatProblemStatement } from "../../../data/NormalizeStatement";
+import { useSocket } from "../../../Services/Usesocket";
+import { useQueryClient } from "@tanstack/react-query";
 const fontLink = document.createElement("link");
 fontLink.rel = "stylesheet";
 fontLink.href =
@@ -101,6 +109,7 @@ const LANGS = [
     tmpl: `process.stdin.resume();\nprocess.stdin.setEncoding('utf8');\nlet _in = '';\nprocess.stdin.on('data', d => _in += d);\nprocess.stdin.on('end', () => {\n    const lines = _in.split('\\n');\n    // solve\n});`,
   },
 ];
+const EMPTY_SUBMISSIONS = [];
 
 function normalizeContest(raw) {
   if (!raw) return null;
@@ -170,6 +179,8 @@ const ratingStyle = (r, t) => {
 };
 
 const verdictInfo = (v, t) => {
+  if (v === "TESTING" || v === "Pending")
+    return { c: t.textMuted, bg: t.bgSub, short: "..." };
   if (v === "Accepted") return { c: t.green, bg: t.greenBg, short: "AC" };
   if (v === "Wrong Answer") return { c: t.red, bg: t.redBg, short: "WA" };
   if (v === "Time Limit Exceeded")
@@ -178,6 +189,16 @@ const verdictInfo = (v, t) => {
   if (v === "Runtime Error") return { c: t.red, bg: t.redBg, short: "RE" };
   if (v === "Internal Error") return { c: t.red, bg: t.redBg, short: "IE" };
   return { c: t.textMuted, bg: t.bgSub, short: "···" };
+};
+const displayVerdict = (verdict) => {
+  const labels = {
+    OK: "Accepted",
+    WRONG_ANSWER: "Wrong Answer",
+    TIME_LIMIT_EXCEEDED: "Time Limit Exceeded",
+    COMPILATION_ERROR: "Compilation Error",
+    RUNTIME_ERROR: "Runtime Error",
+  };
+  return labels[verdict] || verdict || "TESTING";
 };
 const normalizeText = (text) => String(text ?? "").replace(/\r/g, "").trim();
 
@@ -274,11 +295,11 @@ export default function Contest({
   const t = dark ? T.dark : T.light;
   const ff = `'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
   const fm = `'Geist Mono', 'Fira Code', 'Cascadia Code', monospace`;
-
   const { data: rawContest, isLoading, isError } = usegetContestById(contestId);
   console.log("data is", rawContest);
   const contest = normalizeContest(rawContest) ?? contestProp ?? null;
-
+  const { data: solvedProblems = [] } = useGetSolvedProblems(contestId);
+  const reactQueryClient = useQueryClient();
   const [probIdx, setProbIdx] = useState(0);
   const [lang, setLang] = useState(LANGS[0]);
   const [codes, setCodes] = useState({});
@@ -297,15 +318,28 @@ export default function Contest({
   const [rightW, setRightW] = useState(400);
   const dragging = useRef(null);
   const navigate = useNavigate();
+  const { on } = useSocket();
   useEffect(() => {
     if (contest) setProbIdx(0);
   }, [contest?.title]);
 
   const prob = contest?.problems?.[probIdx] ?? null;
+  const { data: savedSubmissions = EMPTY_SUBMISSIONS } = useUserSubmissions(
+    prob?.contestId,
+    prob?.index,
+  );
   const codeKey = prob ? `${prob.idx}_${lang.id}` : `__${lang.id}`;
   const code = codes[codeKey] ?? lang.tmpl;
   const probSubs = prob ? subs[prob.idx] || [] : [];
-  const solved = probSubs.some((s) => s.verdict === "Accepted");
+  const isProblemSolved = (problem) =>
+    Boolean(problem) &&
+    solvedProblems.some(
+      (submission) =>
+        submission.verdict === "OK" &&
+        Number(submission.cfContestId) === Number(problem.contestId) &&
+        submission.problemIndex === problem.index,
+    );
+  const solved = isProblemSolved(prob);
   const cfSubmitUrl =
     prob?.contestId && prob?.index
       ? `https://codeforces.com/contest/${prob.contestId}/submit/${prob.index}`
@@ -313,6 +347,73 @@ export default function Contest({
   const cfLoginUrl = cfSubmitUrl
     ? `https://codeforces.com/enter?back=${encodeURIComponent(cfSubmitUrl)}`
     : "https://codeforces.com/enter";
+
+  useEffect(() => {
+    if (!prob) return;
+
+    const latestSubmission = savedSubmissions[0];
+    const latestLanguage = LANGS.find(
+      (item) => item.id === latestSubmission?.language,
+    );
+    if (latestLanguage) setLang(latestLanguage);
+    if (latestSubmission?.submittedCode) {
+      setCodes((current) => ({
+        ...current,
+        [`${prob.idx}_${latestSubmission.language}`]: latestSubmission.submittedCode,
+      }));
+    }
+
+    setSubs((current) => ({
+      ...current,
+      [prob.idx]: savedSubmissions.map((submission) => {
+        const submissionLanguage = LANGS.find(
+          (item) => item.id === submission.language,
+        );
+        const submittedAt = new Date(submission.createdAt || submission.submittedAt);
+        return {
+          id: submission._id,
+          verdict: displayVerdict(submission.verdict),
+          lang: submissionLanguage?.label || submission.language,
+          time: `${submission.timeConsumedMillis || 0}ms`,
+          mem: submission.memoryConsumedBytes
+            ? `${(submission.memoryConsumedBytes / 1024 / 1024).toFixed(1)}MB`
+            : "0MB",
+          at: Number.isNaN(submittedAt.getTime())
+            ? ""
+            : submittedAt.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          code: submission.submittedCode,
+        };
+      }),
+    }));
+  }, [prob?.idx, savedSubmissions]);
+
+  useEffect(() => {
+    return on("submission-status-updated", (update) => {
+      setSubs((current) => Object.fromEntries(
+        Object.entries(current).map(([problemId, entries]) => [
+          problemId,
+          entries.map((entry) =>
+            entry.id === update.submissionId
+              ? {
+                ...entry,
+                verdict: displayVerdict(update.verdict),
+                time: `${update.timeConsumedMillis || 0}ms`,
+                mem: update.memoryConsumedBytes
+                  ? `${(update.memoryConsumedBytes / 1024 / 1024).toFixed(1)}MB`
+                  : "0MB",
+              }
+              : entry,
+          ),
+        ]),
+      ));
+      reactQueryClient.invalidateQueries({
+        queryKey: ["solvedProblems", contestId],
+      });
+    });
+  }, [contestId, on, reactQueryClient]);
 
   useEffect(() => {
     if (!contest) return;
@@ -379,11 +480,41 @@ export default function Contest({
 
 
   const submitCode = async (problem) => {
+    if (!problem) return;
 
-    console.log("cfsubmission is", problem)
+    setSubmitting(true);
     window.open(cfSubmitUrl, "_blank");
-    const submitPayload = {
+    try {
+      const response = await createSubmission({
+        contestId,
+        cfContestId: problem.contestId,
+        problemIndex: problem.index,
+        language: lang.id,
+        submittedCode: code,
+      });
+      const submission = response.submission;
+      const pendingSubmission = {
+        id: submission._id,
+        verdict: response.status || submission.verdict || "TESTING",
+        lang: lang.label,
+        time: "Pending",
+        mem: "Pending",
+        at: "just now",
+        code,
+      };
 
+      setSubs((current) => ({
+        ...current,
+        [problem.idx]: [pendingSubmission, ...(current[problem.idx] || [])],
+      }));
+      setRightTab("submissions");
+      setConfirm(false);
+    } catch (error) {
+      window.alert(
+        error.response?.data?.message || "Unable to queue the submission.",
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
   const runCode = async () => {
@@ -667,7 +798,7 @@ export default function Contest({
                 Login to CF
               </button>
               <button
-                onClick={submitCode(prob)}
+                onClick={() => submitCode(prob)}
                 style={{
                   flex: 2,
                   height: 38,
@@ -799,7 +930,7 @@ export default function Contest({
           <div style={{ display: "flex", gap: 3, marginLeft: 4 }}>
             {(contest?.problems ?? []).map((p, i) => {
               const ps = subs[p.idx] || [];
-              const ok = ps.some((s) => s.verdict === "Accepted");
+              const ok = isProblemSolved(p);
               const tried = ps.length > 0 && !ok;
               return (
                 <button
@@ -2275,7 +2406,7 @@ function SubsPane({ subs, t, ff, fm }) {
       {subs.map((s) => {
         const vi = verdictInfo(s.verdict, t);
         const isOpen = open === s.id;
-        const isPending = s.verdict === "Pending";
+        const isPending = s.verdict === "Pending" || s.verdict === "TESTING";
         return (
           <div
             key={s.id}

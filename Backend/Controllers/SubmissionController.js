@@ -10,12 +10,10 @@ export const createSubmissionRecord = async (req, res) => {
     const userId = req.id;
 
     if (!cfContestId || !problemIndex || !language) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Missing required submission fields.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Missing required submission fields.",
+      });
     }
 
     const user = await studentModel.findById(userId);
@@ -26,13 +24,11 @@ export const createSubmissionRecord = async (req, res) => {
     }
 
     if (!user.CF_Handle) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Student must link a Codeforces handle before submission polling can start.",
-        });
+      return res.status(400).json({
+        success: false,
+        message:
+          "Student must link a Codeforces handle before submission polling can start.",
+      });
     }
 
     const contest = await contestModel.findOne({
@@ -52,7 +48,7 @@ export const createSubmissionRecord = async (req, res) => {
       problemIndex,
       language,
       verdict: "TESTING",
-      submittedCode : submittedCode,
+      submittedCode: submittedCode,
     });
 
     await submissionQueue.add(
@@ -64,6 +60,7 @@ export const createSubmissionRecord = async (req, res) => {
         cfSubmissionId: null,
         problemIndex,
         language,
+        requestedAt: submission.createdAt.getTime(),
         pollCount: 0,
       },
       { delay: 4000 },
@@ -71,9 +68,9 @@ export const createSubmissionRecord = async (req, res) => {
 
     return res.status(201).json({
       success: true,
+      status: "TESTING",
+      message: "Submission received and queued for checking.",
       submission,
-      cfSubmissionUrl: `https://codeforces.com/contest/${cfContestId}/submit`,
-      viewSubmissionUrl: `https://codeforces.com/contest/${cfContestId}/submission/${cfSubmissionId}`,
     });
   } catch (err) {
     console.error("createSubmissionRecord error:", err);
@@ -104,7 +101,12 @@ export const getSubmissionById = async (req, res) => {
 export const listUserSubmissions = async (req, res) => {
   try {
     const userId = req.id;
-    const submissions = await Submission.find({ user: userId })
+    const { cfContestId, problemIndex } = req.query;
+    const filter = { user: userId };
+    if (cfContestId) filter.cfContestId = Number(cfContestId);
+    if (problemIndex) filter.problemIndex = problemIndex;
+
+    const submissions = await Submission.find(filter)
       .sort({ createdAt: -1 })
       .populate("contest", "name contestId");
 
@@ -114,3 +116,20 @@ export const listUserSubmissions = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const getSolvedProblemsByUser = async(req,res)=>{
+  try{
+    const userId = req.id;
+    const contestId = req.params.contestId;
+    const solvedSubmissions = await Submission.find({
+      user:userId,
+      contest:contestId,
+      verdict:"OK"
+    })
+    return res.status(200).json({ success: true, solvedSubmissions });
+  }
+  catch(err) {
+    console.error("getSolvedProblemsByUser error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}

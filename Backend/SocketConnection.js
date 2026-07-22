@@ -18,6 +18,7 @@ export const connectSocket = (io) => {
   });
 
   io.on("connection", (socket) => {
+    socket.join(`user:${socket.userid}`);
     console.log(`🔌 Connected: ${socket.id}`);
     socket.on("create-room", ({ teacherName, questions, teacherId }) => {
       if (!teacherName || !questions || questions.length === 0) {

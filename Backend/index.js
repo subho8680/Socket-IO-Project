@@ -12,6 +12,7 @@ import { connectSocket } from "./SocketConnection.js";
 import { StartScheduler } from "./Scheduler.js";
 import contestRouter from "./Routes/ContestRoute.js";
 import submissionRouter from "./Routes/SubmissionRoute.js";
+import { setSocketServer } from "./utils/socket.js";
 import "./Queues/submissionQueue.js";
 const app = express();
 const corsOptions = {
@@ -35,6 +36,7 @@ const io = new Server(server, {
   },
 });
 dotenv.config({});
+setSocketServer(io);
 connectSocket(io);
 // StartScheduler(io);
 

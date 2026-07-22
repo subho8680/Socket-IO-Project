@@ -26,7 +26,7 @@ export const useScrapeProblems = () =>
 
 export const usegetContestById = (id) =>
   useQuery({
-    queryKey: ["getContest",id],
+    queryKey: ["getContest", id],
     queryFn: async () => {
       const res = await axios.get(`${API}/contest/getContest/${id}`, {
         withCredentials: true,
@@ -44,6 +44,27 @@ export const executeCode = async ({ code, language, input, expectedOutput }) => 
   return res.data;
 };
 
+export const createSubmission = async (payload) => {
+  const res = await axios.post(`${API}/submission/create`, payload, {
+    withCredentials: true,
+  });
+  return res.data;
+};
+
+export const useUserSubmissions = (cfContestId, problemIndex) =>
+  useQuery({
+    queryKey: ["userSubmissions", cfContestId, problemIndex],
+    queryFn: async () => {
+      const res = await axios.get(`${API}/submission/user/list`, {
+        params: { cfContestId, problemIndex },
+        withCredentials: true,
+      });
+      return res.data.submissions;
+    },
+    enabled: Boolean(cfContestId && problemIndex),
+    refetchOnMount: "always",
+  });
+
 export const useGetAllContest = () =>
   useQuery({
     queryKey: ["AllContest"],
@@ -53,4 +74,17 @@ export const useGetAllContest = () =>
       });
       return res.data;
     },
+  });
+
+export const useGetSolvedProblems = (contestId) =>
+  useQuery({
+    queryKey: ["solvedProblems", contestId],
+    queryFn: async () => {
+      const res = await axios.get(`${API}/submission/user/list/${contestId}`, {
+        withCredentials: true,
+      });
+      return res.data.solvedSubmissions;
+    },
+    enabled: Boolean(contestId),
+    refetchOnMount: "always",
   });
