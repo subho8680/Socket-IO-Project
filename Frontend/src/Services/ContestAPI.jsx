@@ -24,13 +24,16 @@ export const useScrapeProblems = () =>
     },
   });
 
-export const usegetContestById = (id) =>
+export const useGetContestById = (id) =>
   useQuery({
     queryKey: ["getContest", id],
     queryFn: async () => {
       const res = await axios.get(`${API}/contest/getContest/${id}`, {
         withCredentials: true,
       });
+      if (!res.data || res.data?.status === "error" || res.data?.success === false) {
+        throw new Error(res.data?.message || res.data?.msg || "Unable to load contest.");
+      }
       return res.data;
     },
   });
@@ -72,6 +75,9 @@ export const useGetAllContest = () =>
       const res = await axios.get(`${API}/contest/getAll`, {
         withCredentials: true,
       });
+      if (!res.data || res.data?.status === "error" || res.data?.success === false) {
+        throw new Error(res.data?.message || res.data?.msg || "Unable to load contests.");
+      }
       return res.data;
     },
   });

@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Avatar, Dropdown, Badge } from "antd";
 import {
   BellOutlined,
@@ -8,6 +8,7 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext";
+import Logo from "./Logo";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -47,26 +48,19 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="max-w-full px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-2xl leading-none tracking-tighter">
-                Q
-              </span>
-            </div>
-            <div>
-              <span className="font-semibold text-2xl tracking-tighter text-gray-900">
-                Quizly
-              </span>
-            </div>
-          </div>
+        <div className="flex items-center gap-6">
+          <Logo size="md" />
+          <nav className="hidden md:flex items-center gap-4 text-sm font-medium text-gray-500">
+            <NavLink to="/contests" className={({isActive}) => isActive ? "text-indigo-600" : "hover:text-gray-900"}>Contests</NavLink>
+            <NavLink to="/room/create-contest" className={({isActive}) => isActive ? "text-indigo-600" : "hover:text-gray-900"}>Create contest</NavLink>
+          </nav>
         </div>
 
         <div className="flex items-center gap-5">
           <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-gray-100 rounded-full border border-gray-200">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             <span className="text-xs font-medium text-gray-600 tracking-wide">
-              {user?.role === "teacher" ? "Teacher Mode" : "Student Mode"}
+              Contestant
             </span>
           </div>
 

@@ -24,9 +24,11 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {
   useGetAllContest,
-  usegetContestById,
+  useGetContestById,
 } from "../../../Services/ContestAPI"; // ← adjust path
 import { useNavigate } from "react-router-dom";
+import Navbar from "../../../components/common/Navbar";
+import { useEffect } from "react";
 
 dayjs.extend(relativeTime);
 
@@ -450,7 +452,7 @@ function ContestCard({ contest, onEnter, onReview, onCopy, isCurrentUser }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onCopy(contest.id);
+                onCopy(contest._id || contest.id || contest.contestId);
               }}
               style={{
                 width: 32,
@@ -471,7 +473,7 @@ function ContestCard({ contest, onEnter, onReview, onCopy, isCurrentUser }) {
 
           {contest.status === "live" && (
             <button
-              onClick={() => onEnter(contest.id)}
+              onClick={() => onEnter(contest._id || contest.id || contest.contestId)}
               style={{
                 padding: "7px 16px",
                 borderRadius: 9,
@@ -493,7 +495,7 @@ function ContestCard({ contest, onEnter, onReview, onCopy, isCurrentUser }) {
           )}
           {contest.status === "upcoming" && (
             <button
-              onClick={() => onEnter(contest.id)}
+              onClick={() => onEnter(contest._id || contest.id || contest.contestId)}
               style={{
                 padding: "7px 16px",
                 borderRadius: 9,
@@ -511,7 +513,7 @@ function ContestCard({ contest, onEnter, onReview, onCopy, isCurrentUser }) {
           )}
           {contest.status === "finished" && (
             <button
-              onClick={() => onReview(contest.id)}
+              onClick={() => onReview(contest._id || contest.id || contest.contestId)}
               style={{
                 padding: "7px 16px",
                 borderRadius: 9,
@@ -579,6 +581,12 @@ export default function ContestDashboard({ onCreateContest, onEnterContest }) {
 
   const handleRefresh = () => refetch();
 
+  useEffect(() => {
+    if (isError) {
+      messageApi.error(error?.message || "Failed to load contests.");
+    }
+  }, [isError, error, messageApi]);
+
   return (
     <ConfigProvider
       theme={{
@@ -590,6 +598,7 @@ export default function ContestDashboard({ onCreateContest, onEnterContest }) {
       }}
     >
       {contextHolder}
+      <Navbar />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
         *,*::before,*::after{box-sizing:border-box}
@@ -890,9 +899,12 @@ export default function ContestDashboard({ onCreateContest, onEnterContest }) {
           )}
 
           {isError && !isLoading && (
-            <ErrorState
-              message={error?.message ?? "Something went wrong"}
-              onRetry={handleRefresh}
+            <Alert
+              type="error"
+              showIcon
+              message="Unable to load contests"
+              description={error?.message || "Something went wrong while fetching contests."}
+              style={{ marginBottom: 20, borderRadius: 14 }}
             />
           )}
 

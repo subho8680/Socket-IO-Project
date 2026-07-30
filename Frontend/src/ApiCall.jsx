@@ -12,6 +12,18 @@ export const registerStudent = async (formData) => {
     return e.response.data;
   }
 };
+export const registerParticipant = async (formData) => {
+  try {
+    const { data } = await axios.post(`${API}/auth/register`, formData, { withCredentials: true });
+    return data;
+  } catch (e) { return e.response?.data || { success: false, msg: "Unable to reach the server." }; }
+};
+export const loginParticipant = async (formData) => {
+  try {
+    const { data } = await axios.post(`${API}/auth/login`, formData, { withCredentials: true });
+    return data;
+  } catch (e) { return e.response?.data || { success: false, msg: "Unable to reach the server." }; }
+};
 export const CreateQuiz = async (formData) => {
   try {
     const data = await axios.post(`${API}/teacher/createQuiz`, formData, {
@@ -118,7 +130,7 @@ export const useGetQuizRoomById = (roomId) =>
       return res.data;
     },
   });
-  export const useGetQuizRoomById2 = (roomId) =>
+export const useGetQuizRoomById2 = (roomId) =>
   useQuery({
     queryKey: ["quizRoomSingle", roomId],
     queryFn: async () => {

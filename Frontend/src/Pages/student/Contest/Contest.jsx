@@ -42,7 +42,7 @@ import {
 import {
   createSubmission,
   executeCode,
-  usegetContestById,
+  useGetContestById,
   useGetSolvedProblems,
   useUserSubmissions,
 } from "../../../Services/ContestAPI";
@@ -151,10 +151,37 @@ const LANGS = [
 ];
 const EMPTY_SUBMISSIONS = [];
 
+const getContestCodeStorageKey = (contestId, userKey) => {
+  const normalizedUser = typeof userKey === "string" && userKey.trim()
+    ? userKey.trim()
+    : "contestant";
+  return contestId ? `contestpad-codes-${normalizedUser}-${contestId}` : `contestpad-codes-${normalizedUser}`;
+};
+
+const readPersistedCodes = (contestId, userKey) => {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = window.localStorage.getItem(getContestCodeStorageKey(contestId, userKey));
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const persistCodes = (contestId, userKey, codes) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(getContestCodeStorageKey(contestId, userKey), JSON.stringify(codes));
+  } catch {
+    // ignore storage errors
+  }
+};
+
 function normalizeContest(raw) {
   if (!raw) return null;
-
-  const contestData = raw.contests?.[0] || raw;
+  const contestData = raw.contest || raw.contests?.[0] || raw;
 
   const scheduledAt = contestData.scheduledAt?.$date
     ? new Date(contestData.scheduledAt.$date)
@@ -170,14 +197,16 @@ function normalizeContest(raw) {
         : contestData.startedAt;
   }
 
-  contestData.problems.sort((a, b) => a.rating - b.rating);
+  const problems = Array.isArray(contestData?.problems)
+    ? [...contestData.problems].sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0))
+    : [];
   return {
     title: contestData.name ?? "Contest",
     durationMinutes: contestData.durationMinutes ?? 120,
     startedAt, // timestamp in ms
     scheduledAt, // Date object
     status: contestData.status ?? "scheduled",
-    problems: (contestData.problems ?? []).map((p, idx) => ({
+    problems: problems.map((p, idx) => ({
       idx: String.fromCharCode(65 + idx),
       name: p.name ?? "Untitled",
       rating: p.rating ?? 0,
@@ -342,14 +371,15 @@ export default function Contest({
       Tabs: { itemColor: t.textMuted, itemActiveColor: t.accent, itemSelectedColor: t.accent },
     },
   };
-  const { data: rawContest, isLoading, isError } = usegetContestById(contestId);
+  const { data: rawContest, isLoading, isError, error } = useGetContestById(contestId);
   console.log("data is", rawContest);
   const contest = normalizeContest(rawContest) ?? contestProp ?? null;
   const { data: solvedProblems = [] } = useGetSolvedProblems(contestId);
   const reactQueryClient = useQueryClient();
+  const storageUserKey = typeof me === "string" ? me : "contestant";
   const [probIdx, setProbIdx] = useState(0);
   const [lang, setLang] = useState(LANGS[0]);
-  const [codes, setCodes] = useState({});
+  const [codes, setCodes] = useState(() => readPersistedCodes(contestId, storageUserKey));
   const [leftTab, setLeftTab] = useState("problem");
   const [rightTab, setRightTab] = useState("testcase");
   const [customIn, setCustomIn] = useState("");
@@ -400,6 +430,19 @@ export default function Contest({
   const cfLoginUrl = cfSubmitUrl
     ? `https://codeforces.com/enter?back=${encodeURIComponent(cfSubmitUrl)}`
     : "https://codeforces.com/enter";
+
+  useEffect(() => {
+    persistCodes(contestId, storageUserKey, codes);
+  }, [contestId, storageUserKey, codes]);
+
+  useEffect(() => {
+    if (!contestId) return;
+
+    const storedCodes = readPersistedCodes(contestId, storageUserKey);
+    if (Object.keys(storedCodes).length > 0) {
+      setCodes((current) => ({ ...current, ...storedCodes }));
+    }
+  }, [contestId, storageUserKey]);
 
   useEffect(() => {
     if (!prob) return;
@@ -698,7 +741,7 @@ export default function Contest({
           <ErrorState
             t={t}
             ff={ff}
-            message="Failed to load contest. Please try again."
+            message={error?.message || "Failed to load contest. Please try again."}
           />
         </div>
       </ConfigProvider>
@@ -769,7 +812,9 @@ export default function Contest({
                 <Button
                   style={{ flex: 2, background: t.accent, borderColor: t.accent }}
                   type="primary"
-                  onClick={() => submitCode(prob)}
+                  onClick={() => {
+                    submitCode(prob)
+                  }}
                 >
                   Submit
                 </Button>

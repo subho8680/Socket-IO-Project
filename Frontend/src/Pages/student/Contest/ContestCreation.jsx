@@ -34,6 +34,7 @@ import {
   useScrapeProblems,
 } from "../../../Services/ContestAPI";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../../../components/common/Navbar";
 
 dayjs.extend(relativeTime);
 
@@ -326,6 +327,7 @@ export default function ContestCreator({ onContestCreated, currentUser }) {
         },
       }}
     >
+      <Navbar />
       {contextHolder}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');

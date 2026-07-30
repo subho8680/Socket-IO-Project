@@ -19,9 +19,14 @@ export const registerTeacher = async (req, res) => {
       userId: newUser._id,
       userType: "Teacher",
     };
-    const day = 24 * 60 * 60 * 1000;
+    const cookieOptions = {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: "none",
+      secure: process.env.NODE_ENV === "production",
+    };
     const token = jwt.sign(tokenData, process.env.SECRET_KEY);
-    res.cookie("token", token, { maxAge: day });
+    res.cookie("token", token, cookieOptions);
     return res.status(201).json({
       msg: "User Logged in Successfully",
       success: true,
@@ -52,9 +57,14 @@ export const TeacherLogin = async (req, res) => {
       userId: curUser._id,
       userType: "Teacher",
     };
-    const day = 24 * 60 * 60 * 1000;
+    const cookieOptions = {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: "none",
+      secure: process.env.NODE_ENV === "production",
+    };
     const token = jwt.sign(tokenData, process.env.SECRET_KEY);
-    res.cookie("token", token, { maxAge: day });
+    res.cookie("token", token, cookieOptions);
     return res.status(201).json({
       msg: "User Logged in Successfully",
       success: true,

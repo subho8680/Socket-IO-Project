@@ -2,7 +2,7 @@ import { fetchProblems } from "../../Services/ProblemFetcher.js";
 import { scrapeAllProblems } from "../../Services/TestCaseScrapper.js";
 import { executeCodebox } from "../../Services/CodeboxRunner.js";
 import contestModel from "../../Models/ContestModel/contest.model.js";
-import { studentModel } from "../../Models/User/Student.model.js";
+import { participantModel } from "../../Models/User/Participant.model.js";
 export const fetchProblem = async (req, res) => {
   const { minR, maxR, count, tags } = req.body;
   console.log("request came");
@@ -23,7 +23,7 @@ export const scrapeProblems = async (req, res) => {
   const { name, durationMinutes, problems, invitedEmails, scheduledAt } =
     req.body;
   const user = req.id;
-  const userDetails = await studentModel.findById(user);
+  const userDetails = await participantModel.findById(user);
   const email = userDetails.email;
   invitedEmails.push(email);
   console.log("SCRAPE API HIT");
@@ -112,7 +112,7 @@ function cleanStatement(text) {
 export const getContests = async (req, res) => {
   try {
     const id = req.id;
-    const user = await studentModel.findById(id);
+    const user = await participantModel.findById(id);
     const email = user.email;
     const contests = await contestModel
       .find({ invitedEmails: email })
@@ -152,10 +152,19 @@ export const executeCode = async (req, res) => {
 export const getContestById = async (req, res) => {
   try {
     const id = req.params.id;
-    const contest = await contestModel.findById(id);
-    if(contest.scheduledAt > new Date()){
-      return res.status(500).json("Contest is not started yet")
+    const contest = await contestModel.findOne({
+      $or: [{ _id: id }, { contestId: id }],
+    });
+    if (!contest) {
+      return res
+        .status(404)
+        .json({ status: "error", message: "Contest not found." });
     }
+    // if (contest.scheduledAt && contest.scheduledAt > new Date()) {
+    //   return res
+    //     .status(403)
+    //     .json({ status: "error", message: "Contest has not started yet." });
+    // }
     return res.status(200).json({
       status: "success",
       contest,
@@ -165,6 +174,6 @@ export const getContestById = async (req, res) => {
   }
 };
 
-export const pollCFSubmission = async(req,res)=>{
-  const userId = req.id
-}
+export const pollCFSubmission = async (req, res) => {
+  const userId = req.id;
+};

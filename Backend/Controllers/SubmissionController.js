@@ -1,6 +1,6 @@
 import Submission from "../Models/SubmissionModel/submission.model.js";
 import contestModel from "../Models/ContestModel/contest.model.js";
-import { studentModel } from "../Models/User/Student.model.js";
+import { participantModel } from "../Models/User/Participant.model.js";
 import { submissionQueue } from "../Queues/submissionQueue.js";
 
 export const createSubmissionRecord = async (req, res) => {
@@ -16,18 +16,18 @@ export const createSubmissionRecord = async (req, res) => {
       });
     }
 
-    const user = await studentModel.findById(userId);
+    const user = await participantModel.findById(userId);
     if (!user) {
       return res
         .status(404)
-        .json({ success: false, message: "Authenticated student not found." });
+        .json({ success: false, message: "Authenticated participant not found." });
     }
 
     if (!user.CF_Handle) {
       return res.status(400).json({
         success: false,
         message:
-          "Student must link a Codeforces handle before submission polling can start.",
+          "Link a Codeforces handle before submission polling can start.",
       });
     }
 
@@ -43,7 +43,6 @@ export const createSubmissionRecord = async (req, res) => {
     const submission = await Submission.create({
       user: user._id,
       contest: contest._id,
-      cfSubmissionId: null,
       cfContestId,
       problemIndex,
       language,
@@ -57,7 +56,6 @@ export const createSubmissionRecord = async (req, res) => {
         submissionId: submission._id.toString(),
         cfHandle: user.CF_Handle,
         cfContestId,
-        cfSubmissionId: null,
         problemIndex,
         language,
         requestedAt: submission.createdAt.getTime(),
@@ -117,19 +115,27 @@ export const listUserSubmissions = async (req, res) => {
   }
 };
 
-export const getSolvedProblemsByUser = async(req,res)=>{
-  try{
+export const getSolvedProblemsByUser = async (req, res) => {
+  try {
     const userId = req.id;
     const contestId = req.params.contestId;
+    const contest = await contestModel.findOne({
+      $or: [{ _id: contestId }, { contestId }],
+    });
+    if (!contest) {
+      return res.status(404).json({
+        success: false,
+        message: "Contest not found.",
+      });
+    }
     const solvedSubmissions = await Submission.find({
-      user:userId,
-      contest:contestId,
-      verdict:"OK"
-    })
+      user: userId,
+      contest: contest._id,
+      verdict: "OK",
+    });
     return res.status(200).json({ success: true, solvedSubmissions });
-  }
-  catch(err) {
+  } catch (err) {
     console.error("getSolvedProblemsByUser error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
-}
+};

@@ -28,7 +28,6 @@ const worker = new Worker(
       submissionId,
       cfHandle,
       cfContestId,
-      cfSubmissionId,
       problemIndex,
       requestedAt,
       pollCount = 0,
@@ -37,7 +36,6 @@ const worker = new Worker(
     const status = await fetchSubmissionStatus({
       cfContestId,
       cfHandle,
-      cfSubmissionId,
       problemIndex,
       requestedAt,
     });
@@ -48,15 +46,21 @@ const worker = new Worker(
       if (pollCount < 15) {
         await submissionQueue.add(
           "cf-poll",
-          { ...job.data, pollCount: pollCount + 1 },
+          {
+            submissionId,
+            cfHandle,
+            cfContestId,
+            problemIndex,
+            requestedAt,
+            pollCount: pollCount + 1,
+          },
           { delay: 4000 },
         );
       }
       return { verdict: "TESTING" };
-    }
+    } 
 
     const updatePayload = {
-      cfSubmissionId: status.cfSubmissionId,
       verdict: status.verdict,
       timeConsumedMillis: status.timeConsumedMillis,
       memoryConsumedBytes: status.memoryConsumedBytes,
@@ -83,9 +87,11 @@ const worker = new Worker(
       await submissionQueue.add(
         "cf-poll",
         {
-          ...job.data,
           submissionId,
-          cfSubmissionId: status.cfSubmissionId,
+          cfHandle,
+          cfContestId,
+          problemIndex,
+          requestedAt,
           pollCount: pollCount + 1,
         },
         { delay: 4000 },

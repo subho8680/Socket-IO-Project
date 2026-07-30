@@ -9,7 +9,6 @@ export const isFinalCodeforcesVerdict = (verdict) => {
 export const fetchSubmissionStatus = async ({
   cfContestId,
   cfHandle,
-  cfSubmissionId,
   problemIndex,
   requestedAt,
 }) => {
@@ -31,20 +30,17 @@ export const fetchSubmissionStatus = async ({
     throw new Error(`Codeforces API error: ${json.comment || json.status}`);
   }
 
-  const targetSubmission = cfSubmissionId
-    ? json.result.find((submission) => submission.id === cfSubmissionId)
-    : json.result.find(
-        (submission) =>
-          submission.problem?.index === problemIndex &&
-          (!requestedAt ||
-            submission.creationTimeSeconds * 1000 >= requestedAt - 1000),
-      );
+  const targetSubmission = json.result.find(
+    (submission) =>
+      submission.problem?.index === problemIndex &&
+      (!requestedAt ||
+        submission.creationTimeSeconds * 1000 >= requestedAt - 1000),
+  );
   if (!targetSubmission) {
     return null;
   }
 
   return {
-    cfSubmissionId: targetSubmission.id,
     cfContestId: targetSubmission.contestId,
     problemIndex: targetSubmission.problem.index,
     verdict: targetSubmission.verdict || "TESTING",

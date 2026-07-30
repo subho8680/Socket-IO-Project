@@ -4,17 +4,13 @@ const submissionSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "studentModel",
+      ref: "Participant",
       required: true,
     },
     contest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Contest",
       required: true,
-    },
-    cfSubmissionId: {
-      type: Number,
-      default: null,
     },
 
     cfContestId: {
