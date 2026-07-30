@@ -7,15 +7,15 @@ function parseGeminiResponse(raw) {
   return JSON.parse(cleaned);
 }
 export const quizCreate = async (req) => {
-  const { topic, quesNo,description } = req;
+  const { topic, quesNo,description,difficulty } = req;
   // console.log(prompt);
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: `
         you are a quiz question creator so give me ${quesNo} important quiz questions on this topic ${topic} and 
-        considering this ${description}
+        considering this ${description} and considering this difficulty ${difficulty} and make sure the questions are unique and not repeated and also make sure you are giving me the correct answer
         along with 4 options and it's correct answer and make sure you are sending me the questions as an array
         of objects where each object is like {title:question name , options:4 options , correctOption:{quesionNo:the option no,answer:correct answer}}
         output format must be a json array ok

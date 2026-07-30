@@ -2,6 +2,8 @@ import { quizCreate } from "../../Gemini.js";
 import { quizModel } from "../../Models/Quiz/quiz.model.js";
 import { teacherModel } from "../../Models/User/Teacher.model.js";
 import jwt from "jsonwebtoken";
+import { generateRoomId } from "../../Roommanager.js";
+import { roomModel } from "../../Models/Room/room.model.js";
 export const registerTeacher = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -17,9 +19,14 @@ export const registerTeacher = async (req, res) => {
       userId: newUser._id,
       userType: "Teacher",
     };
-    const day = 24 * 60 * 60 * 1000;
+    const cookieOptions = {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
+    };
     const token = jwt.sign(tokenData, process.env.SECRET_KEY);
-    res.cookie("token", token, { maxAge: day });
+    res.cookie("token", token, cookieOptions);
     return res.status(201).json({
       msg: "User Logged in Successfully",
       success: true,
@@ -50,9 +57,14 @@ export const TeacherLogin = async (req, res) => {
       userId: curUser._id,
       userType: "Teacher",
     };
-    const day = 24 * 60 * 60 * 1000;
+    const cookieOptions = {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: "none",
+      secure: process.env.NODE_ENV === "production",
+    };
     const token = jwt.sign(tokenData, process.env.SECRET_KEY);
-    res.cookie("token", token, { maxAge: day });
+    res.cookie("token", token, cookieOptions);
     return res.status(201).json({
       msg: "User Logged in Successfully",
       success: true,
@@ -65,6 +77,153 @@ export const TeacherLogin = async (req, res) => {
 
 export const getAllQuizes = async (req, res) => {
   const userId = req.id;
+};
+export const generateQuestion = async (req, res) => {
+  try {
+    const { topic, quesNo, description, difficulty } = req.body;
+    const quizQuestions = await quizCreate({
+      topic,
+      quesNo,
+      description,
+      difficulty,
+    });
+    return res.status(200).json({
+      msg: "Quiz created Successfully",
+      quiz: quizQuestions,
+      success: true,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error generating quiz",
+      success: false,
+    });
+  }
+};
+
+export const createQuiz = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { name, topic, difficulty, questions, scheduledAt } = req.body;
+    const newQuiz = await quizModel.create({
+      name,
+      topic,
+      difficulty,
+      questions,
+      createdBy: userId,
+    });
+    const roomId = generateRoomId();
+    const newRoom = await roomModel.create({
+      roomCode: roomId,
+      quizId: newQuiz._id,
+      teacherId: userId,
+      scheduledAt: scheduledAt || null,
+    });
+    return res.status(201).json({
+      msg: "Quiz and RoomID created Successfully",
+      quiz: newQuiz,
+      room: newRoom,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error Finalizing quiz and RoomID",
+      success: false,
+    });
+  }
+};
+export const getQuizRoomById = async (req, res) => {
+  try {
+    const userId = req.id;
+    const quizRoomId = req.params.roomId;
+    console.log("fetching quiz room with id", quizRoomId);
+    const room = await roomModel.findById(quizRoomId).populate({
+      path: "quizId",
+    });
+    if (!room) {
+      return res.status(404).json({
+        msg: "Quiz room not found",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      msg: "Quiz Room fetched Successfully",
+      room: room,
+      success: true,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error Fetching quiz",
+      success: false,
+    });
+  }
+};
+export const getQuizRoomById2 = async (req, res) => {
+  try {
+    const userId = req.id;
+    const quizRoomId = req.params.roomId;
+    console.log("fetching quiz room with id", quizRoomId);
+    const room = await roomModel.findOne({ roomCode: quizRoomId }).populate({
+      path: "quizId",
+    });
+    if (!room) {
+      return res.status(404).json({
+        msg: "Quiz room not found",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      msg: "Quiz Room fetched Successfully",
+      room: room,
+      success: true,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error Fetching quiz",
+      success: false,
+    });
+  }
+};
+export const updateRoom = async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const { scheduledAt } = req.body;
+    const room = await roomModel.findById(roomId);
+    if (!room) {
+      return res.status(404).json({
+        msg: "Quiz room not found",
+        success: false,
+      });
+    }
+    room.scheduledAt = scheduledAt;
+    await room.save();
+    return res.status(200).json({
+      msg: "Quiz room updated successfully",
+      success: true,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error updating quiz",
+      success: false,
+    });
+  }
+};
+
+export const getAllQuizRooms = async (req, res) => {
+  try {
+    const userId = req.id;
+    const rooms = await roomModel.find({ teacherId: userId }).populate({
+      path: "quizId",
+    });
+    return res.status(200).json({
+      msg: "All quiz rooms fetched Successfully",
+      rooms: rooms,
+      success: true,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      msg: "Error Fetching quiz rooms",
+      success: false,
+    });
+  }
 };
 
 // export const createQuiz = async (req, res) => {
@@ -108,30 +267,30 @@ export const getAllQuizes = async (req, res) => {
 //   }
 // };
 
-export const createQuiz = async (req, res) => {
-  try {
-    const quiz = await quizModel.aggregate([
-      { $match: { questions: { $exists: true, $ne: [] } } },
-      { $sample: { size: 1 } }
-    ]);
+// export const createQuiz = async (req, res) => {
+//   try {
+//     const quiz = await quizModel.aggregate([
+//       { $match: { questions: { $exists: true, $ne: [] } } },
+//       { $sample: { size: 1 } }
+//     ]);
 
-    if (!quiz.length) {
-      return res.status(404).json({
-        msg: "No quizzes available",
-        success: false,
-      });
-    }
+//     if (!quiz.length) {
+//       return res.status(404).json({
+//         msg: "No quizzes available",
+//         success: false,
+//       });
+//     }
 
-    return res.status(200).json({
-      msg: "Random quiz fetched",
-      quiz: quiz[0],
-      success: true,
-    });
+//     return res.status(200).json({
+//       msg: "Random quiz fetched",
+//       quiz: quiz[0],
+//       success: true,
+//     });
 
-  } catch (e) {
-    console.log(e);
-  }
-};
+//   } catch (e) {
+//     console.log(e);
+//   }
+// };
 export const logOut = async (req, res) => {
   try {
     const id = req.id;

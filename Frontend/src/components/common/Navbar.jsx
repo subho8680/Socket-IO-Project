@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Avatar, Dropdown, Badge } from "antd";
 import {
   BellOutlined,
@@ -15,13 +15,21 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   const menuItems = [
-    { key: "profile", icon: <UserOutlined />, label: "Profile" },
-    { key: "settings", icon: <SettingOutlined />, label: "Settings" },
+    {
+      key: "profile",
+      icon: <UserOutlined />,
+      label: "Profile",
+    },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "Settings",
+    },
     { type: "divider" },
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: <span className="text-danger">Logout</span>,
+      label: <span className="text-red-600">Logout</span>,
       onClick: () => {
         logout();
         navigate("/");
@@ -38,58 +46,73 @@ export default function Navbar() {
       .slice(0, 2) || "U";
 
   return (
-    <header
-      className="sticky top-0 z-50 flex items-center justify-between px-6 h-16 border-b border-bg-border"
-      style={{ background: "rgba(7,7,14,0.92)", backdropFilter: "blur(12px)" }}
-    >
-      <Logo size="sm" />
-
-      <div className="flex items-center gap-4">
-        <div
-          className="hidden sm:flex items-center gap-1 px-3 py-1 rounded-full border border-bg-border"
-          style={{ background: "#0d0d18" }}
-        >
-          <span className="w-2 h-2 rounded-full bg-success animate-pulse inline-block" />
-          <span className="text-xs text-txt-secondary font-medium ml-1">
-            {user?.role === "teacher" ? "Teacher" : "Student"}
-          </span>
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <div className="max-w-full px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Logo size="md" />
+          <nav className="hidden md:flex items-center gap-4 text-sm font-medium text-gray-500">
+            <NavLink to="/contests" className={({isActive}) => isActive ? "text-indigo-600" : "hover:text-gray-900"}>Contests</NavLink>
+            <NavLink to="/room/create-contest" className={({isActive}) => isActive ? "text-indigo-600" : "hover:text-gray-900"}>Create contest</NavLink>
+          </nav>
         </div>
 
-        <Badge count={3} size="small" color="#7c3aed">
-          <button
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-txt-secondary hover:text-txt-primary hover:bg-bg-hover transition-all"
-            style={{ border: "1px solid #1e1e35", background: "#0d0d18" }}
-          >
-            <BellOutlined style={{ fontSize: 16 }} />
-          </button>
-        </Badge>
+        <div className="flex items-center gap-5">
+          <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-gray-100 rounded-full border border-gray-200">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs font-medium text-gray-600 tracking-wide">
+              Contestant
+            </span>
+          </div>
 
-        <Dropdown
-          menu={{ items: menuItems }}
-          trigger={["click"]}
-          placement="bottomRight"
-        >
-          <button className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-bg-hover transition-all">
-            <Avatar
-              size={32}
-              style={{
-                background: "linear-gradient(135deg,#7c3aed,#06b6d4)",
-                fontWeight: 700,
-                fontSize: 13,
-              }}
-            >
-              {initials}
-            </Avatar>
-            <div className="hidden sm:block text-left">
-              <div className="text-xs font-semibold text-txt-primary leading-tight">
-                {user?.name || "User"}
+          <Badge count={3} size="small" color="#6366f1" offset={[2, 2]}>
+            <button className="w-10 h-10 flex items-center justify-center rounded-2xl hover:bg-gray-100 transition-all text-gray-600 hover:text-gray-900">
+              <BellOutlined style={{ fontSize: 19 }} />
+            </button>
+          </Badge>
+
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={["click"]}
+            placement="bottomRight"
+          >
+            <button className="flex items-center gap-3 px-2 py-1.5 rounded-2xl hover:bg-gray-100 transition-all group">
+              <Avatar
+                size={38}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  fontSize: "15px",
+                  boxShadow: "0 2px 8px rgba(99, 102, 241, 0.2)",
+                }}
+              >
+                {initials}
+              </Avatar>
+
+              <div className="hidden md:block text-left">
+                <div className="font-semibold text-gray-900 text-[15px] leading-tight group-hover:text-violet-700 transition-colors">
+                  {user?.name || "User"}
+                </div>
+                <div className="text-xs text-gray-500">{user?.email || ""}</div>
               </div>
-              <div className="text-xs text-txt-secondary leading-tight">
-                {user?.email || ""}
-              </div>
-            </div>
-          </button>
-        </Dropdown>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+          </Dropdown>
+        </div>
       </div>
     </header>
   );

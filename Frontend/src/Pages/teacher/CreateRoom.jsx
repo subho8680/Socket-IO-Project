@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "../../components/common/DashboardLayout";
 import { OPTION_LABELS } from "../../data/mockData";
-import { createQuiz } from "../../ApiCall";
+import { CreateQuiz, generateQuestions, useCreateQuiz, useGenerateQuesitions } from "../../ApiCall";
 import { useSocket } from "../../Services/Usesocket";
 import { useAuth } from "../../context/AuthContext";
 const DIFFICULTIES = ["Easy", "Medium", "Hard", "Mixed"];
@@ -440,6 +440,7 @@ export default function CreateRoom() {
     difficulty: "Medium",
     numQuestions: 5,
     timePerQ: 30,
+    scheduledAt: null,
   });
   const [questions, setQuestions] = useState([]);
   const [generating, setGenerating] = useState(false);
@@ -473,19 +474,22 @@ export default function CreateRoom() {
     if (step === 0 && !validateStep0()) return;
     goTo(step + 1);
   };
-
+  console.log("new questions are", questions);
+  const generateQues = useGenerateQuesitions();
+  const createQuizRoom = useCreateQuiz();
   const handleGenerate = async () => {
     setGenerating(true);
     setGenError("");
     try {
-      const res = await createQuiz({
+      const res = await generateQues.mutateAsync({
         topic: roomData.topic,
         quesNo: String(roomData.numQuestions),
         description: roomData.title || roomData.topic,
+        difficulty: roomData.difficulty,
       });
       if (!res?.success || !res?.quiz)
         throw new Error(res?.msg || "Generation failed");
-      const qs = (res.quiz.questions || []).map((q) =>
+      const qs = (res.quiz || []).map((q) =>
         normaliseQuestion(q, roomData.timePerQ),
       );
       if (!qs.length)
@@ -515,7 +519,17 @@ export default function CreateRoom() {
     }
     setLaunching(true);
     try {
-      createRoom(user.user.name, questions, user.user._id);
+      // createRoom(user.user.name, questions, user.user._id);
+      const formData = {
+        name: roomData.title,
+        topic: roomData.topic,
+        difficulty: roomData.difficulty,
+        questions: questions,
+        scheduledAt: roomData.scheduledAt || null,
+      };
+      const res = await createQuizRoom.mutateAsync(formData);
+      setLaunching(false);
+      navigate("/teacher/dashboard");
     } catch {
       message.error("Failed to launch");
     } finally {
@@ -657,6 +671,57 @@ export default function CreateRoom() {
                             setRoomData({ ...roomData, timePerQ: v })
                           }
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-3">
+                          When to start?
+                        </label>
+                        <div className="flex gap-3 mb-4">
+                          <PillBtn
+                            label="Start Immediately"
+                            active={!roomData.scheduledAt}
+                            onClick={() =>
+                              setRoomData({ ...roomData, scheduledAt: null })
+                            }
+                          />
+                          <PillBtn
+                            label="Schedule for Later"
+                            active={!!roomData.scheduledAt}
+                            onClick={() =>
+                              setRoomData({
+                                ...roomData,
+                                scheduledAt: new Date(
+                                  Date.now() + 60 * 60 * 1000,
+                                )
+                                  .toISOString()
+                                  .slice(0, 16), // 1hr from now as default
+                              })
+                            }
+                          />
+                        </div>
+
+                        {roomData.scheduledAt && (
+                          <div className="mt-2">
+                            <input
+                              type="datetime-local"
+                              value={roomData.scheduledAt}
+                              min={new Date(Date.now() + 5 * 60 * 1000)
+                                .toISOString()
+                                .slice(0, 16)}
+                              onChange={(e) =>
+                                setRoomData({
+                                  ...roomData,
+                                  scheduledAt: e.target.value,
+                                })
+                              }
+                              className="h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all"
+                            />
+                            <p className="text-xs text-slate-400 mt-1.5 font-medium">
+                              Room code will be generated now — students can
+                              join before it starts
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -862,11 +927,14 @@ export default function CreateRoom() {
                 >
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">
-                      Ready to Publish
+                      {roomData.scheduledAt
+                        ? "Schedule Quiz"
+                        : "Ready to Publish"}
                     </h3>
                     <p className="text-blue-200 text-sm">
-                      Your quiz will be available for students to join via Room
-                      ID
+                      {roomData.scheduledAt
+                        ? `Will auto-start on ${new Date(roomData.scheduledAt).toLocaleString()}`
+                        : "Your quiz will go live instantly via Room ID"}
                     </p>
                   </div>
                   <Btn
@@ -877,7 +945,11 @@ export default function CreateRoom() {
                     onClick={handleLaunch}
                   >
                     <Rocket size={18} />
-                    {launching ? "Launching…" : "Publish Quiz"}
+                    {launching
+                      ? "Launching…"
+                      : roomData.scheduledAt
+                        ? "Schedule Quiz"
+                        : "Publish Quiz"}
                   </Btn>
                 </div>
               </div>

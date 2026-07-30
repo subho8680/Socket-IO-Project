@@ -9,6 +9,12 @@ import teacherRouter from "./Routes/TeacherRoute.js";
 import studentRouter from "./Routes/StudentRoute.js";
 import leaderBoardRouter from "./Routes/LeaderBoardRoute.js";
 import { connectSocket } from "./SocketConnection.js";
+import { StartScheduler } from "./Scheduler.js";
+import contestRouter from "./Routes/ContestRoute.js";
+import submissionRouter from "./Routes/SubmissionRoute.js";
+import participantRouter from "./Routes/ParticipantRoute.js";
+import { setSocketServer } from "./utils/socket.js";
+import "./Queues/submissionQueue.js";
 const app = express();
 const corsOptions = {
   origin: "http://localhost:5173",
@@ -19,6 +25,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/api/v1/teacher", teacherRouter);
 app.use("/api/v1/student", studentRouter);
+app.use("/api/v1/auth", participantRouter);
+app.use("/api/v1/contest", contestRouter);
+app.use("/api/v1/submission", submissionRouter);
 app.use("/api/v1/all", leaderBoardRouter);
 const server = createServer(app);
 const io = new Server(server, {
@@ -28,9 +37,12 @@ const io = new Server(server, {
     credentials: true,
   },
 });
-connectSocket(io)
 dotenv.config({});
-const port = process.env.PORT || 3000;
+setSocketServer(io);
+connectSocket(io);
+// StartScheduler(io);
+
+const port = process.env.PORT || 8000;
 server.listen(port, () => {
   console.log(`server is listening at port ${port}`);
   connectDB();
