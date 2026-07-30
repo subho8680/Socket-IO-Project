@@ -1,7 +1,8 @@
 import { Queue, Worker } from "bullmq";
 import Redis from "ioredis";
 import Submission from "../Models/SubmissionModel/submission.model.js";
-import { emitToUser } from "../utils/socket.js";
+import { emitToUser, emitToRoom } from "../utils/socket.js";
+import { calculateContestLeaderboard } from "../Controllers/LeaderBoard/leaderBoard.controller.js";
 import {
   fetchSubmissionStatus,
   isFinalCodeforcesVerdict,
@@ -40,8 +41,6 @@ const worker = new Worker(
       requestedAt,
     });
 
-    // The Codeforces submission may not be visible yet. Keep this record in
-    // TESTING and let the next delayed job check again.
     if (!status) {
       if (pollCount < 15) {
         await submissionQueue.add(
@@ -58,7 +57,7 @@ const worker = new Worker(
         );
       }
       return { verdict: "TESTING" };
-    } 
+    }
 
     const updatePayload = {
       verdict: status.verdict,
@@ -81,6 +80,15 @@ const worker = new Worker(
         memoryConsumedBytes: submission.memoryConsumedBytes,
         passedTestCount: submission.passedTestCount,
       });
+      try {
+        const contest = await Submission.findById(submissionId).populate("contest");
+        if (contest && contest.contest) {
+          const leaderboard = await calculateContestLeaderboard(contest.contest._id.toString());
+          emitToRoom(contest.contest._id.toString(), "leaderboard-updated", { leaderboard });
+        }
+      } catch (err) {
+        console.error("Error emitting leaderboard update from queue:", err);
+      }
     }
 
     if (!isFinalCodeforcesVerdict(status.verdict) && pollCount < 15) {
@@ -120,6 +128,15 @@ worker.on("failed", async (job, err) => {
       memoryConsumedBytes: submission.memoryConsumedBytes,
       passedTestCount: submission.passedTestCount,
     });
+    try {
+      const contest = await Submission.findById(job.data.submissionId).populate("contest");
+      if (contest && contest.contest) {
+        const leaderboard = await calculateContestLeaderboard(contest.contest._id.toString());
+        emitToRoom(contest.contest._id.toString(), "leaderboard-updated", { leaderboard });
+      }
+    } catch (err) {
+      console.error("Error emitting leaderboard update on failed worker:", err);
+    }
   }
 });
 

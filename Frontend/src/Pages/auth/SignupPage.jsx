@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { UserOutlined, MailOutlined, LockOutlined } from "@ant-design/icons";
+import { UserOutlined, MailOutlined, LockOutlined, CodeOutlined } from "@ant-design/icons";
 import { registerParticipant } from "../../ApiCall";
 import { useAuth } from "../../context/AuthContext";
 import { AuthInput, AuthShell } from "./LoginPage";
@@ -8,13 +8,18 @@ import { AuthInput, AuthShell } from "./LoginPage";
 export default function SignupPage() {
   const navigate = useNavigate();
   const { signup } = useAuth();
-  const [values, setValues] = useState({ name: "", email: "", password: "", confirm: "" });
+  const [values, setValues] = useState({ name: "", email: "", password: "", confirm: "", CF_Handle: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async (event) => {
     event.preventDefault();
     setError("");
+
+    if (!values.CF_Handle.trim()) {
+      setError("Codeforces handle is required.");
+      return;
+    }
 
     if (values.password !== values.confirm) {
       setError("Passwords do not match.");
@@ -26,6 +31,7 @@ export default function SignupPage() {
       name: values.name,
       email: values.email,
       password: values.password,
+      CF_Handle: values.CF_Handle,
     });
     setLoading(false);
 
@@ -55,6 +61,14 @@ export default function SignupPage() {
           placeholder="Your name"
           value={values.name}
           onChange={(name) => setValues({ ...values, name })}
+        />
+
+        <AuthInput
+          icon={<CodeOutlined className="text-slate-500" />}
+          type="text"
+          placeholder="Codeforces handle"
+          value={values.CF_Handle}
+          onChange={(CF_Handle) => setValues({ ...values, CF_Handle })}
         />
 
         <AuthInput

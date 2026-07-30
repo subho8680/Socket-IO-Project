@@ -160,11 +160,20 @@ export const getContestById = async (req, res) => {
         .status(404)
         .json({ status: "error", message: "Contest not found." });
     }
-    // if (contest.scheduledAt && contest.scheduledAt > new Date()) {
-    //   return res
-    //     .status(403)
-    //     .json({ status: "error", message: "Contest has not started yet." });
-    // }
+    const now = new Date();
+    if (contest.scheduledAt && new Date(contest.scheduledAt) > now) {
+      const contestObj = contest.toObject();
+      delete contestObj.problems;
+      return res.status(200).json({
+        status: "success",
+        contest: contestObj,
+      });
+    }
+    if (contest.status === "scheduled") {
+      contest.status = "running";
+      contest.startedAt = contest.scheduledAt ? new Date(contest.scheduledAt).getTime() : Date.now();
+      await contest.save();
+    }
     return res.status(200).json({
       status: "success",
       contest,

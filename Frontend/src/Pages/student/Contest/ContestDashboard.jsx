@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConfigProvider, Tooltip, message, Skeleton } from "antd";
+import { Alert } from "antd";
 import {
   TrophyOutlined,
   ThunderboltOutlined,
@@ -812,44 +813,6 @@ export default function ContestDashboard({ onCreateContest, onEnterContest }) {
             ))}
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            style={{ marginBottom: 20 }}
-          >
-            <div className="db-join">
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 9,
-                  background: "#EEF2FF",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <CodeOutlined style={{ color: "#4F46E5", fontSize: 16 }} />
-              </div>
-              <input
-                className="db-join-input"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-                placeholder="Enter room code e.g. contest_1776891404267"
-                maxLength={32}
-              />
-              <button
-                className="db-join-btn"
-                onClick={handleJoin}
-                disabled={!joinCode.trim()}
-              >
-                Join →
-              </button>
-            </div>
-          </motion.div>
 
           <motion.div
             initial={{ opacity: 0 }}

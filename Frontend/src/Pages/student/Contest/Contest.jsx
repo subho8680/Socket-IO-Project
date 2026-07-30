@@ -50,6 +50,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { formatProblemStatement } from "../../../data/NormalizeStatement";
 import { useSocket } from "../../../Services/Usesocket";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../../context/AuthContext";
 
 const fontLink = document.createElement("link");
 fontLink.rel = "stylesheet";
@@ -315,9 +316,10 @@ function ErrorState({ t, ff, message }) {
 
 export default function Contest({
   contest: contestProp,
-  me = "contestant",
   onExit,
 }) {
+  const { user } = useAuth();
+  const me = user?.CF_Handle || user?.name || "contestant";
   const [dark, setDark] = useState(true);
   const { contestId } = useParams();
   console.log("contestid is", contestId);
@@ -371,9 +373,10 @@ export default function Contest({
       Tabs: { itemColor: t.textMuted, itemActiveColor: t.accent, itemSelectedColor: t.accent },
     },
   };
-  const { data: rawContest, isLoading, isError, error } = useGetContestById(contestId);
+  const { data: rawContest, isLoading, isError, error, refetch: refetchContest } = useGetContestById(contestId);
   console.log("data is", rawContest);
   const contest = normalizeContest(rawContest) ?? contestProp ?? null;
+  const [board, setBoard] = useState([]);
   const { data: solvedProblems = [] } = useGetSolvedProblems(contestId);
   const reactQueryClient = useQueryClient();
   const storageUserKey = typeof me === "string" ? me : "contestant";
@@ -395,7 +398,19 @@ export default function Contest({
   const [rightW, setRightW] = useState(400);
   const dragging = useRef(null);
   const navigate = useNavigate();
-  const { on } = useSocket();
+  const { on, socket } = useSocket();
+
+  useEffect(() => {
+    if (!contestId || !socket) return;
+    socket.emit("join-room", { contestId });
+  }, [contestId, socket]);
+
+  useEffect(() => {
+    return on("leaderboard-updated", ({ leaderboard }) => {
+      console.log("Leaderboard updated from socket:", leaderboard);
+      setBoard(leaderboard);
+    });
+  }, [on]);
   const prob = contest?.problems?.[probIdx] ?? null;
   useEffect(() => {
     if (contest) setProbIdx(0);
@@ -516,38 +531,49 @@ export default function Contest({
 
     const tick = () => {
       let targetTime;
+      const nowMs = Date.now();
 
-      if (contest.status === "scheduled" && contest.scheduledAt) {
-        targetTime = contest.scheduledAt.getTime();
-      } else if (contest.startedAt) {
-        targetTime = contest.startedAt + contest.durationMinutes * 60000;
+      if (contest.status === "scheduled" && contest.scheduledAt && new Date(contest.scheduledAt).getTime() > nowMs) {
+        targetTime = new Date(contest.scheduledAt).getTime();
       } else {
-        targetTime = Date.now() + contest.durationMinutes * 60000;
+        const start = contest.startedAt || (contest.scheduledAt ? new Date(contest.scheduledAt).getTime() : contest.createdAt);
+        targetTime = start + contest.durationMinutes * 60000;
       }
 
-      const rem = targetTime - Date.now();
+      const rem = targetTime - nowMs;
 
       if (rem <= 0) {
         setTimeLeft("00:00");
         setWarn(false);
+        if (contest.status === "scheduled") {
+          console.log("Countdown reached 0, refetching contest...");
+          refetchContest();
+        }
         return;
       }
 
       setWarn(rem < 600000);
 
-      const m = Math.floor(rem / 60000);
+      const hrs = Math.floor(rem / 3600000);
+      const m = Math.floor((rem % 3600000) / 60000);
       const s = Math.floor((rem % 60000) / 1000);
 
-      setTimeLeft(
-        `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`,
-      );
+      if (contest.status === "scheduled" && new Date(contest.scheduledAt) > new Date()) {
+        setTimeLeft(
+          `${String(hrs).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+        );
+      } else {
+        setTimeLeft(
+          `${String(Math.floor(rem / 60000)).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+        );
+      }
     };
 
     tick();
     const id = setInterval(tick, 1000);
 
     return () => clearInterval(id);
-  }, [contest]);
+  }, [contest, refetchContest]);
 
   useEffect(() => {
     const mv = (e) => {
@@ -743,6 +769,121 @@ export default function Contest({
             ff={ff}
             message={error?.message || "Failed to load contest. Please try again."}
           />
+        </div>
+      </ConfigProvider>
+    );
+  }
+
+  const isStarted = contest ? (contest.status !== "scheduled" || (contest.scheduledAt && new Date() >= new Date(contest.scheduledAt))) : false;
+
+  if (!isStarted) {
+    return (
+      <ConfigProvider theme={contestTheme}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
+            background: t.bg,
+            fontFamily: ff,
+            color: t.text,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 24,
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              background: t.surface,
+              border: `1px solid ${t.border}`,
+              borderRadius: 16,
+              padding: "40px 60px",
+              textAlign: "center",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+              maxWidth: 600,
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 20,
+            }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 12px",
+                borderRadius: 20,
+                background: t.yellowBg,
+                border: `1px solid ${t.yellow}33`,
+                fontSize: 12,
+                fontWeight: 700,
+                color: t.yellow,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              <ClockCircleOutlined /> Upcoming Contest
+            </div>
+
+            <h1
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: t.text,
+                margin: 0,
+                letterSpacing: "-0.5px",
+                lineHeight: 1.2,
+              }}
+            >
+              {contest?.title}
+            </h1>
+
+            <div
+              style={{
+                fontSize: 14,
+                color: t.textSub,
+                display: "flex",
+                gap: 16,
+                justifyContent: "center",
+              }}
+            >
+              <span>Duration: <strong>{contest?.durationMinutes} minutes</strong></span>
+            </div>
+
+            <div
+              style={{
+                fontSize: 48,
+                fontWeight: 800,
+                fontFamily: fm,
+                color: t.accent,
+                letterSpacing: "0.05em",
+                margin: "12px 0",
+              }}
+            >
+              {timeLeft || "00:00:00"}
+            </div>
+
+            <p style={{ color: t.textMuted, fontSize: 14, margin: 0 }}>
+              The contest will start automatically once the countdown reaches zero. Please wait.
+            </p>
+
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              onClick={() => refetchContest()}
+              style={{
+                marginTop: 8,
+                background: t.accent,
+                borderColor: t.accent,
+                fontWeight: 600,
+              }}
+            >
+              Check Status
+            </Button>
+          </div>
         </div>
       </ConfigProvider>
     );
@@ -1077,7 +1218,7 @@ export default function Contest({
                 )
               ) : (
                 <RankingsPane
-                  board={BOARD}
+                  board={board}
                   me={me}
                   probs={contest?.problems ?? []}
                   t={t}
@@ -1370,7 +1511,12 @@ function DragHandle({ onStart, t }) {
 function ProblemPane({ prob, t, ff, fm }) {
   const rc = ratingStyle(prob.rating, t);
   return (
-    <div style={{ padding: "24px 24px 40px", fontFamily: ff }}>
+    <div className="problem-pane-content" style={{ padding: "24px 24px 40px", fontFamily: ff }}>
+      <style>{`
+        .problem-pane-content img {
+          display: none !important;
+        }
+      `}</style>
       <Typography.Title
         level={4}
         style={{ color: t.text, margin: "0 0 12px", letterSpacing: "-0.02em" }}

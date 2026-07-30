@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 export const isAuthenticated = async (req, res, next) => {
   try {
     const token = req.cookies.token;
+    console.log("token", token);
     if (!token) {
       return res.status(400).json({
         msg: "User not Authenticated log in first",
