@@ -146,13 +146,13 @@ After the contest ends:
 ```
 CodeClash
 │
-├── client/
+├── frontend/
 │   ├── src/
 │   ├── components/
 │   ├── pages/
 │   └── services/
 │
-├── server/
+├── Backend/
 │   ├── controllers/
 │   ├── routes/
 │   ├── models/
